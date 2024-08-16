@@ -7,11 +7,11 @@ import pandas as pd
 from polybench_kernels import build_all_energy_kernels, build_all_time_kernels, get_energy_multiplication_factor
 import time
 import argparse
-from Check_all_params import check_exp_setup_powerCap
+from utils_exp_params import check_exp_setup_powerCap
 import numpy as np
 from utils_dir import setup_dir_structure_with_powerCap,setup_oracle_dir_structure
 import datetime
-from Likwid import Likwid
+from utils_likwid import Likwid
 import threading
 import psutil
 from utils_power import get_power_caps_list, set_power_cap, rapl_energy_max, stop_event, counter_thread

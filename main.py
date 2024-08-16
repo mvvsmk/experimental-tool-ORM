@@ -31,8 +31,8 @@ def parse_args():
     parser.add_argument("--data_type", type=str, default="DATA_TYPE_IS_DOUBLE", help="Data type to run the experiments")
     parser.add_argument("--suffix", type=str, default=f"", help="Suffix for the experiment directory")
     parser.add_argument("--password", type=str, required=True, help="Password for sudo")
-    parser.add_arguemnt("--inst_type", type=str, required=True, help="oracle, oracle+powercap, powercap, papi")
-    parser.add_arguemnt("--benchmarks", type=str, required=True, help="MLIR, Polybench")
+    parser.add_argument("--inst_type", type=str, required=True, help="oracle, oracle+powercap, powercap, papi")
+    parser.add_argument("--benchmarks", type=str, required=True, help="MLIR, Polybench")
     parser.add_argument("--itr", type=int, default=5, help="Number of iterations to run the experiments")
     parser.add_argument("--freq_change", type=bool, default=False, help="Change the frequency")
     parser.add_argument('-e','--exp_conditions',
@@ -252,13 +252,5 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
                           suffix=suffix + "_mlir", 
                           sudo_password=password, sleep=10)
     
-        
-
-    
-    
-    
-
-    
-    
-    
-    
+if __name__ == "__main__":
+    main()
