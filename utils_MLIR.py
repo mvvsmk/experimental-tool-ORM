@@ -69,9 +69,10 @@ def run_command_and_get_output(command:str,sudo_password:str):
         exit()
     return output
 
-def run_mlir_obj_papi(papi_counters_file,build_dir,output_file,sudo_password,measure_high):
+def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_password,measure_high):
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     list_of_papi_counters = get_papi_counters(papi_counters_file)
+    output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
     if os.path.isfile(output_file):
         df_old = pandas.read_csv(output_file)
     else :
@@ -136,9 +137,10 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_file,sudo_password,mea
     print(f"Output written to {output_file}")
     return output_file
 
-def run_mlir_obj_oracle(build_dir,output_file,sudo_password,machine,power_cap_file = None, sleep_time=10):
+def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_cap_file = None, sleep_time=10):
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     
+    output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
     data = {
         "Name" : [],
         "Energy" : [],
