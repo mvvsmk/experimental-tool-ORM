@@ -1,0 +1,8 @@
+Likwid_testing/Likwid_modified*
+__py__cache__/*
+__pycache__/*
+bin*
+energy_roofline_bin*
+state.json
+mlir_models/mlir/*
+.vscode*

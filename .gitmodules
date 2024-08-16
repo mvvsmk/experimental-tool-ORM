@@ -1,0 +1,12 @@
+[submodule "kernels/PolyBenchC-4.2.1_mem_fencing"]
+	path = kernels/PolyBenchC-4.2.1_mem_fencing
+	url = https://github.com/mvvsmk/PolyBenchC-4.2.1.git
+[submodule "kernels/a-roofline-model-of-energy-ubenchmarks"]
+	path = kernels/a-roofline-model-of-energy-ubenchmarks
+	url = https://github.com/mvvsmk/a-roofline-model-of-energy-ubenchmarks.git
+[submodule "kernels/MLIR_OpenEarth_BenchMarks"]
+	path = kernels/MLIR_OpenEarth_BenchMarks
+	url = git@github.com:mvvsmk/MLIR_OpenEarth_BenchMarks.git
+[submodule "kernels/PolyBenchC-4.2.1"]
+	path = kernels/PolyBenchC-4.2.1
+	url = https://github.com/mvvsmk/PolyBenchC-4.2.1.git
