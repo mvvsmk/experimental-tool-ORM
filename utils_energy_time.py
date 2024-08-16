@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import time
 from utils_power import run_with_energy_thread, set_power_cap
 
 def run_kernels_energy_and_time(file_to_run,password,machine):
@@ -46,12 +47,12 @@ def oracle_collect_kernels_energy_and_time(build_dir, output_dir, machine, num_i
         for j in range(run_itr):
             binary_file = os.path.join(build_dir, file)
             time.sleep(sleep)
-            energy, time = run_kernels_energy_and_time(file_to_run=binary_file,
+            energy_r, time_r = run_kernels_energy_and_time(file_to_run=binary_file,
                                                                  password=password,
                                                                  machine=machine)
             data["Name"].append(file)
-            data["Energy(J)"].append(energy)
-            data["Time(s)"].append(time)
+            data["Energy(J)"].append(energy_r)
+            data["Time(s)"].append(time_r)
             print(f"Ran {file} {j+1} times")
             df = pd.DataFrame(data)
             df.to_csv(output_csv, index=False)
@@ -104,12 +105,12 @@ def powercap_collect_kernels_energy_and_time(build_dir, output_dir,
         for j in range(run_itr):
             binary_file = os.path.join(build_dir, file)
             time.sleep(sleep)
-            energy, time = run_kernels_energy_and_time(file_to_run=binary_file,
+            energy_r, time_r = run_kernels_energy_and_time(file_to_run=binary_file,
                                                                  password=password,
                                                                  machine=machine)
             data["Name"].append(file)
-            data["Energy(J)"].append(energy)
-            data["Time(s)"].append(time)
+            data["Energy(J)"].append(energy_r)
+            data["Time(s)"].append(time_r)
             print(f"Ran {file} {j+1} times")
             df = pd.DataFrame(data)
             df.to_csv(output_csv, index=False)
