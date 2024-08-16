@@ -76,7 +76,7 @@ def run_with_energy_thread(command : str, password : str, machine : str) -> dict
     counter_overflows.start()
     try :
         output = subprocess.run(command, shell=True, check=True,
-                                capture_output=True,timeout=18000,input=password.encode('utf-8'))
+                                capture_output=True,timeout=28800,input=password.encode('utf-8'))
         file_ran = True
         stop_event.set()
         counter_overflows.join()

@@ -22,10 +22,10 @@ def parse_args():
     
 
 def compile_obj_with_instumentation(build_dir,src_dir,inst_type):
-    papi_headers_dir = "open-earth-benchmarks/include"
-    C_runner = "mlir_obj/C_runner.cpp"
+    papi_headers_dir = "kernels/MLIR_OpenEarth_BenchMarks/open-earth-benchmarks/include"
+    C_runner = "kernels/MLIR_OpenEarth_BenchMarks/mlir_obj/C_runner.cpp"
     inst_commands = ""
-    mlir_libs = "mlir_build/llvm-project/build/lib"
+    mlir_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     if inst_type == "papi":
         inst_commands = "-DPAPI_OPENEARTH -lpapi"
     else:
@@ -70,7 +70,7 @@ def run_command_and_get_output(command:str,sudo_password:str):
     return output
 
 def run_mlir_obj_papi(papi_counters_file,build_dir,output_file,sudo_password,measure_high):
-    mlir_runner_libs = "mlir_build/llvm-project/build/lib"
+    mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     list_of_papi_counters = get_papi_counters(papi_counters_file)
     if os.path.isfile(output_file):
         df_old = pandas.read_csv(output_file)
@@ -115,7 +115,7 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_file,sudo_password,mea
                 # continue
                 try:
                     # output = run_command_and_get_output(command=command,sudo_password=sudo_password)
-                    output = subprocess.run(command,shell=True,capture_output=True,input=sudo_password.encode("utf-8"),timeout=7200)
+                    output = subprocess.run(command,shell=True,capture_output=True,input=sudo_password.encode("utf-8"),timeout=28800)
                     output_list = output.stdout.decode().split()
                     print(f"counter {counter} value {output_list[-1]}")
                     data[counter].append(output_list[-1])
@@ -136,8 +136,8 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_file,sudo_password,mea
     print(f"Output written to {output_file}")
     return output_file
 
-def run_mlir_obj_oracle(build_dir,output_file,sudo_password,machine,power_cap_file = None):
-    mlir_runner_libs = "mlir_build/llvm-project/build/lib"
+def run_mlir_obj_oracle(build_dir,output_file,sudo_password,machine,power_cap_file = None, sleep_time=10):
+    mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     
     data = {
         "Name" : [],

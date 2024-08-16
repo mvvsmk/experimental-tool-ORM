@@ -35,6 +35,10 @@ def parse_args():
     parser.add_arguemnt("--benchmarks", type=str, required=True, help="MLIR, Polybench")
     parser.add_argument("--itr", type=int, default=5, help="Number of iterations to run the experiments")
     parser.add_argument("--freq_change", type=bool, default=False, help="Change the frequency")
+    parser.add_argument('-e','--exp_conditions',
+                        action='append',
+                        help='what are the experimenatal setup\n g_userspace \n no_prefetcher \n no_turbo+', 
+                        required=True)
     args = parser.parse_args()
     args.suffix = args.suffix + formatted_datetime
     return args
@@ -80,8 +84,22 @@ def main():
         print("Invalid inst_type")
         exit(1)
     
+    if inst_type == "papi" and freq_change:
+        print("Frequency change not supported with papi")
+        exit(1)
+    
+    if not freq_change:
+        exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, benchmark)
+    else:
+        available_frequencies = get_available_frequencies(machine, password)
+        available_frequencies = sorted(available_frequencies, reverse=True)
+        for freq in available_frequencies:
+            set_frequency(freq, machine, password)
+            exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suffix + f"_{freq}", password, itr, oracle, powercap, papi, benchmark)
+    
+def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, benchmark):
     # First let's capture oracle data
-    if oracle and not freq_change and benchmark == "Polybench":
+    if oracle and benchmark == "Polybench":
         print("Capturing oracle data")
         # Run the experiments
         oracle_output_dir = setup_oracle_dir_structure(tools_dir=os.curdir, machine_name=machine, suffix=suffix)
@@ -97,7 +115,7 @@ def main():
                                                machine=machine, num_itr=itr,
                                                suffix=suffix, password=password, sleep=10)
     
-    if powercap and not freq_change and benchmark == "Polybench":
+    if powercap and benchmark == "Polybench":
         print("Capturing powercap data")
         # Run the experiments
         kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
@@ -119,7 +137,7 @@ def main():
                                                  machine=machine, num_itr=itr,
                                                  suffix=suffix, password=password, sleep=10, powercap_file=powercap_file)
     
-    if papi and not freq_change and benchmark == "Polybench":
+    if papi and benchmark == "Polybench":
         print("Capturing papi data")
         # Run the experiments
         kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
@@ -131,6 +149,7 @@ def main():
         build_dir_papi = os.path.join(build_dir, "papi")
         os.makedirs(build_dir_papi, exist_ok=True)
         default_verbose_polybench = os.path.join(kernel_dir, "./PolyBenchC-4.2.1")
+        
         if machine != "raptorlake":
             configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, machine=machine)
             
@@ -182,18 +201,59 @@ def main():
             merged_output_file = os.path.join(papi_output_dir, f"kernel_data_PolyBenchC-4.2.1_{suffix}_merged.csv")
             merged_df.to_csv(merged_output_file, index=False)
             print(f"Saved merged data to {merged_output_file}")
+    
+    if oracle and benchmark == "MLIR":
+        print("Capturing oracle data")
+        # Run the experiments
+        oracle_output_dir = setup_oracle_dir_structure(tools_dir=os.curdir, machine_name=machine, suffix=suffix + "_mlir")
+        build_dir_oracle = os.path.join(build_dir, "oracle_mlir")
+        os.makedirs(build_dir_oracle, exist_ok=True)
+        mlir_src = os.path.join(kernel_dir, "./MLIR_OpenEarth_BenchMarks/mlir_obj/obj_only")
+        build_dir_oracle_mlir = compile_obj_with_instumentation(src_dir=mlir_src, build_dir=build_dir_oracle, inst_type="energy time")
+        run_mlir_obj_oracle(build_dir=build_dir_oracle_mlir, output_dir=oracle_output_dir, 
+                            machine=machine, 
+                            num_itr=itr, 
+                            suffix=suffix + "_mlir", 
+                            sudo_password=password, sleep=10)
         
-        
-            
-            
-            
-            
+    if powercap and benchmark == "MLIR":
+        print("Capturing powercap data")
+        # Run the experiments
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+                                                                                                  machine_name=machine, 
+                                                                                                  suffix=suffix + "_mlir",
+                                                                                                  PowerCapFolder=True)
+        powercap_output_dir = powercap_data_dir
+        build_dir_powercap = os.path.join(build_dir, "powercap_mlir")
+        os.makedirs(build_dir_powercap, exist_ok=True)
+        mlir_src = os.path.join(kernel_dir, "./MLIR_OpenEarth_BenchMarks/mlir_obj/obj_only")
+        build_dir_powercap_mlir = compile_obj_with_instumentation(src_dir=mlir_src, build_dir=build_dir_powercap,inst_type="energy time")
+        run_mlir_obj_powercap(build_dir=build_dir_powercap_mlir, output_dir=powercap_output_dir, 
+                              machine=machine, 
+                              num_itr=itr, 
+                              suffix=suffix + "_mlir", 
+                              sudo_password=password, sleep=10, powercap_file=powercap_file)
+    
+    if papi and benchmark == "MLIR":
+        print("Capturing papi data")
+        # Run the experiments
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+                                                                                                  machine_name=machine, 
+                                                                                                  suffix=suffix + "_mlir",
+                                                                                                  KernelFolder=True)
+        papi_output_dir = kernel_data_dir
+        build_dir_papi = os.path.join(build_dir, "papi_mlir")
+        os.makedirs(build_dir_papi, exist_ok=True)
+        mlir_src = os.path.join(kernel_dir, "./MLIR_OpenEarth_BenchMarks/mlir_obj/obj_only")
+        build_dir_papi_mlir = compile_obj_with_instumentation(src_dir=mlir_src, build_dir=build_dir_papi,inst_type="papi")
+        run_mlir_obj_papi(build_dir=build_dir_papi_mlir, output_dir=papi_output_dir, 
+                          machine=machine, 
+                          num_itr=itr, 
+                          suffix=suffix + "_mlir", 
+                          sudo_password=password, sleep=10)
+    
         
 
-        
-    
-    # if papi and not freq_change:
-        
     
     
     
