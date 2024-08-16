@@ -214,7 +214,10 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
                             machine=machine, 
                             # num_itr=itr, 
                             suffix=suffix + "_mlir", 
-                            sudo_password=password, sleep=10)
+                            sudo_password=password, 
+                            # sleep=10,
+                            power_cap_file=powercap_file
+                            )
         
     if powercap and benchmark == "MLIR":
         print("Capturing powercap data")
@@ -232,7 +235,9 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
                               machine=machine, 
                             #   num_itr=itr, 
                               suffix=suffix + "_mlir", 
-                              sudo_password=password, sleep=10, powercap_file=powercap_file)
+                              sudo_password=password, 
+                            #   sleep=10, 
+                              powercap_file=powercap_file)
     
     if papi and benchmark == "MLIR":
         print("Capturing papi data")
