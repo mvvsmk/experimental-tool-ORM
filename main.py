@@ -212,7 +212,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         build_dir_oracle_mlir = compile_obj_with_instumentation(src_dir=mlir_src, build_dir=build_dir_oracle, inst_type="energy time")
         run_mlir_obj_oracle(build_dir=build_dir_oracle_mlir, output_dir=oracle_output_dir, 
                             machine=machine, 
-                            num_itr=itr, 
+                            # num_itr=itr, 
                             suffix=suffix + "_mlir", 
                             sudo_password=password, sleep=10)
         
@@ -230,7 +230,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         build_dir_powercap_mlir = compile_obj_with_instumentation(src_dir=mlir_src, build_dir=build_dir_powercap,inst_type="energy time")
         run_mlir_obj_powercap(build_dir=build_dir_powercap_mlir, output_dir=powercap_output_dir, 
                               machine=machine, 
-                              num_itr=itr, 
+                            #   num_itr=itr, 
                               suffix=suffix + "_mlir", 
                               sudo_password=password, sleep=10, powercap_file=powercap_file)
     
