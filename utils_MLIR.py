@@ -173,7 +173,7 @@ def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_
     
     print(f"oracle collected in file {output_file}")
 
-def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,power_cap_file,machine,suffix=""):
+def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machine,suffix=""):
     mlir_runner_libs = "mlir_build/llvm-project/build/lib"
     data = {
         "Name" : [],
@@ -183,7 +183,7 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,power_cap_file,mach
     }
     list_of_files_to_run = []
     output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
-    power_cap_df = pandas.read_csv(power_cap_file)
+    power_cap_df = pandas.read_csv(powercap_file)
     list_of_files_to_run = list(power_cap_df["Name"].unique())
     
     print(f"files to run {list_of_files_to_run}")
