@@ -253,7 +253,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         build_dir_papi_mlir = compile_obj_with_instumentation(src_dir=mlir_src, build_dir=build_dir_papi,inst_type="papi")
         run_mlir_obj_papi(build_dir=build_dir_papi_mlir, output_dir=papi_output_dir, 
                           machine=machine, 
-                          num_itr=itr, 
+                        #   num_itr=itr, 
                           suffix=suffix + "_mlir", 
                           sudo_password=password, sleep=10)
     
