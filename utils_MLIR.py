@@ -26,6 +26,7 @@ def compile_obj_with_instumentation(build_dir,src_dir,inst_type):
     C_runner = "kernels/MLIR_OpenEarth_BenchMarks/mlir_obj/C_runner.cpp"
     inst_commands = ""
     mlir_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
+    mlir_libs = os.path.join(os.curdir,mlir_libs)
     if inst_type == "papi":
         inst_commands = "-DPAPI_OPENEARTH -lpapi"
     else:
@@ -71,6 +72,7 @@ def run_command_and_get_output(command:str,sudo_password:str):
 
 def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_password,measure_high):
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
+    mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
     list_of_papi_counters = get_papi_counters(papi_counters_file)
     output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
     if os.path.isfile(output_file):
@@ -139,6 +141,7 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_passwo
 
 def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_cap_file = None, sleep_time=10):
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
+    mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
     
     output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
     data = {
@@ -174,7 +177,8 @@ def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_
     print(f"oracle collected in file {output_file}")
 
 def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machine,suffix=""):
-    mlir_runner_libs = "mlir_build/llvm-project/build/lib"
+    mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
+    mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
     data = {
         "Name" : [],
         "PowerCap" : [],
