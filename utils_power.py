@@ -48,6 +48,7 @@ def set_power_cap(power_cap,sudo_password):
     try:
         print(f"Setting power cap to {int(power_cap)} uW")
         command=f"sudo -S powercap-set -p intel-rapl -e 1 -z 0 -c 1 -l {int(power_cap)}" 
+        print(f"command : {command}")
         subprocess.run(command, shell=True, check=True,input=sudo_password.encode('utf-8'))
 
     except Exception as e:
