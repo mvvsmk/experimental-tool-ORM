@@ -195,7 +195,8 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machi
     # for i, file in enumerate(list_of_files_to_run):
     for index, row in power_cap_df.iterrows():
         power_cap = row[machine]
-        set_power_cap(power_cap=power_cap,sudo_password=sudo_password)
+        powercap_uW = power_cap * 1000000
+        set_power_cap(power_cap=powercap_uW,sudo_password=sudo_password)
         mlir_file = os.path.join(build_dir,row["Name"])
         mlir_baseName = os.path.basename(mlir_file)
         mlir_baseName = os.path.splitext(mlir_baseName)[0]
