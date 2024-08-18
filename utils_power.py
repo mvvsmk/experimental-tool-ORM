@@ -45,6 +45,9 @@ def set_power_cap(power_cap,sudo_password):
     """
     Set the power cap of the system
     """
+    if power_cap < 500:
+        print("Power cap is too low, give powercap in uW")
+        exit()
     try:
         print(f"Setting power cap to {int(power_cap)} uW")
         command=f"sudo -S powercap-set -p intel-rapl -e 1 -z 0 -c 1 -l {int(power_cap)}" 
