@@ -10,11 +10,11 @@ import pandas as pd
 from utils_freq import get_available_frequencies,set_frequency,set_governer
 from utils_exp_params import check_exp_setup
 from state_load_store import load_state, save_state
-#from PowerCap import set_power_cap
-from utils_asm import make_sum_squares_asm
+from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell
 
 
-base_array_len_a_roofline_energy = 128
+
+base_array_len_a_roofline_energy = 64
 
 machine_data_cache = {
     'broadwell': {
@@ -164,6 +164,29 @@ def getcache_counter_mapping(machine,cache):
     }
     return data[machine][cache]
 
+def getcache_array_mapping(machine,cache):
+    data = {
+    "broadwell" :{
+        'L1' : 'PAPI_LST_INS',
+        'L2' : 'PAPI_L1_DCM',
+        'L3' : 'PAPI_L2_DCM',
+        'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
+    },
+    "raptorlake" :{
+        'L1' : 'PAPI_LST_INS',
+        'L2' : 'PAPI_L1_DCM',
+        'L3' : 'PAPI_L2_DCM',
+        'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
+    },
+    "rocketlake" :{
+        'L1D' : 5120,
+        'L2' : 15872,
+        'L3' : 131072, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
+        'DRAM' : 314572800
+    },
+    }
+    return data[machine][cache]
+
 
 def get_constant_power(machine : str,sudo_pass :str, duration :str) -> float:
     energy_output = [0,0,0]
@@ -238,9 +261,9 @@ def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, TYPE=1) -> None:
 
 
 def read_output(filename,
-                sudo_password,papi_counter,ITRS,arr_size) -> list[str]:
+                sudo_password,papi_counter,FREQ,arr_size) -> list[str]:
     try:
-        command = f"echo {sudo_password} | sudo -S SIZE_ARR={arr_size}  PAPI_EVENT_NAME={papi_counter} ITRS={ITRS} {filename}"
+        command = f"echo {sudo_password} | sudo -S SIZE_ARR={arr_size}  PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"
         print(f"command : {command}")
         output = subprocess.run([command],
                                 check=True,shell=True,capture_output=True)
@@ -254,10 +277,10 @@ def read_output(filename,
         return []
 
 def read_output_pmu_high_power(filename,
-                sudo_password,papi_counter,arr_size, ITRS) -> list[str]:
+                sudo_password,papi_counter,arr_size, FREQ) -> list[str]:
     try:
         # best results obtained when all the low power cores are disabled
-        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_glc SIZE_ARR={arr_size} PAPI_EVENT_NAME={papi_counter} ITRS={ITRS} {filename}"],
+        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_glc SIZE_ARR={arr_size} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
                                 check=True,shell=True,capture_output=True)
         # print(f"output: {output}")
         output_list = output.stdout.decode('utf-8').strip().split("\n")
@@ -270,9 +293,9 @@ def read_output_pmu_high_power(filename,
         return []
 
 def read_output_pmu_low_power(filename,
-                sudo_password,papi_counter,arr_size, ITRS) -> list[str]:
+                sudo_password,papi_counter,arr_size, FREQ) -> list[str]:
     try:
-        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_grt SIZE_ARR={arr_size} PAPI_EVENT_NAME={papi_counter} ITRS={ITRS} {filename}"],
+        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_grt SIZE_ARR={arr_size} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
                                 check=True,shell=True,capture_output=True)
         # print(f"output: {output}")
         output_list = output.stdout.decode('utf-8').strip().split("\n")
@@ -336,8 +359,8 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     print(f"Created {build_dir}")
 
     output_file = os.path.join(output_dir,f"a_roofline_model_for_energy_benchmarks_{suffix}.csv")
-
-    MAD_PER_ELEMENT_values = np.logspace(0,4,20,base=10).astype(int)
+    
+    MAD_PER_ELEMENT_values = np.logspace(0,5,30,base=10).astype(int)
     # MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[1,2,3,4,5,6,7,8,9])
     # MAD_PER_ELEMENT_values = [1, 10 ,100, 1000, 10000]
     Mad_PER_ELEMENT_values = list(set(MAD_PER_ELEMENT_values))
@@ -371,7 +394,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
             }
         
     # caches = ['L1' , 'L2' , 'L3' ,'DRAM']
-    caches = ['L1D' , 'L2' , 'L3']
+    caches = ['L1D' , 'L2' , 'L3', 'DRAM']
     # caches = ['L3' ]
     print(f"build_dir: {build_dir}")
     files = os.listdir(build_dir)
@@ -379,44 +402,36 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     # exit()
     # with progressbar.ProgressBar(max_value=len(files), 
     #                         widgets=widgets) as bar:
-    for file in files:
+    for j, cache in enumerate(caches):
         # bar.update(progress)
-        for i, cache in enumerate(caches):
-            if(i != 1) :
-                continue
-            # prev_cache = caches[i-1]
+        data = {
+            "Frequency(kHz)" : [],
+            "Execution Time(s)" : [],
+            "Energy(J)" : [],
+            "Power(W)" : [],
+            "total_flops" : [],
+            "total_missed_bytes" : [],
+            "OI" : [],
+            "cache_level" : [],
+            "counter_used" : [],
+            "Constant Energy (J)" : [],
+            "Duration measurement (s)" : [],
+            "Constant Power (W)" : [],
+            "File Name" : [],
+            "Array Size" : [],
+            }
+        output_file = os.path.join(output_dir,f"a_roofline_model_for_energy_benchmarks_{suffix}_{cache}.csv")
+        for file in files:
             papi_counter = getcache_counter_mapping(machine=machine,cache=cache)
-            cache_info_dict = machine_data_cache[machine][cache]
-            if i != 0:
-                # cache_info_dict_prev = machine_data_cache[machine][prev_cache]
-                # max_multiple_base_array_len = int(cache_info_dict_prev['cache_size']) // (base_array_len_a_roofline_energy * 8 * 8)
-                # max_multiple_base_array_len = int(cache_info_dict['cache_size']) // (base_array_len_a_roofline_energy * 8 * 8)
-                # array_len = int(cache_info_dict['cache_size']) // (8  * 10) # worked for L2
-                # array_len = int(cache_info_dict['cache_size']) // (8) # worked for L2
-                # array_len = 256000 # worked for L3
-                # array_len = 192000 # worked for L3
-                # array_len = 6400 # worked for L2
-                array_len = 131072 # worked for L3 1000 ITRS
-                # array_len = 15872 # worked for L2 10000 ITRS
-                # array_len = 5120 # works for L1
-                # array_len = int(cache_info_dict_prev['cache_size']) // (8 * 8) # works sometimes for L3
-            else :
-                array_len = 5120 # works for L1 100000 ITRS
+            array_len = getcache_array_mapping(machine=machine,cache=cache)
             array_sizes_to_run = [array_len]
-            ITRS = ITR_ENV
-            # array_sizes_to_run = np.linspace(1,max_multiple_base_array_len,5,dtype=int)
-            # print(f"cache info size : {int(cache_info_dict['cache_size'])}")
             print(f"array_sizes_to_run: {array_sizes_to_run}")
             #print current cache level
             print(f"cache: {cache}")
             print(f"papi_counter: {papi_counter}")
             print(f"array_len: {array_len}")
-            print(f"cache info size : {int(cache_info_dict['cache_size'])}")
             print(f"array len * base_array_len_a_roofline_energy: {array_len * base_array_len_a_roofline_energy}")
-            print(f"byes in array : {array_len * base_array_len_a_roofline_energy * 8 * 8}")
-            
-            # print(f"max_multiple_base_array_len: {max_multiple_base_array_len}")
-            # exit()            
+            print(f"byes in array : {array_len * base_array_len_a_roofline_energy * 8 * 8}")          
             for array_size in array_sizes_to_run:
                 energy_readings = []
                 readings = {}
@@ -449,17 +464,17 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                                     output_list = read_output_pmu_high_power(filename=filename,
                                                                             sudo_password=sudo_password,
                                                                             papi_counter=papi_counter,
-                                                                            arr_size=array_size, ITRS=ITRS)
+                                                                            arr_size=array_size, FREQ=int(frequency*1000))
                                 else:
                                     output_list = read_output(filename=filename,
                                                             sudo_password=sudo_password,
                                                             papi_counter=papi_counter,
-                                                            arr_size=array_size, ITRS=ITRS)
+                                                            arr_size=array_size, FREQ=int(frequency*1000))
                             else :
                                 output_list = read_output(filename=filename,
                                                         sudo_password=sudo_password,
                                                         papi_counter=papi_counter,
-                                                        arr_size=array_size, ITRS=ITRS)
+                                                        arr_size=array_size, FREQ=int(frequency*1000))
                             if output_list != []:
                                 break
                             count += 1
@@ -548,7 +563,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     df = df.drop('counter_used', axis=1)
     df = df.groupby('File Name').median().reset_index()
     df.sort_values(by=['OI'],inplace=True)
-    df.to_csv(output_file,index=False)
+    # df.to_csv(output_file,index=False)
     
 
     # create a dataframe from the data
@@ -602,20 +617,13 @@ if __name__ == "__main__":
     Likwid.disable_prefetchers(sudo_password=sudo_password)
     Likwid.disable_turbo_boost(sudo_password=sudo_password)
     set_governer(governer="userspace", sudo_password=sudo_password)
-    if not args.powercap:
-        list_of_freq = get_available_frequencies()
-        list_of_freq.sort(reverse=True)
-
-    # state =  {
-    #     "source_dir" : source_dir,
-    #     "build_dir" : build_dir,
-    #     "output_dir" : output_dir,
-    #     "sudo_password" : sudo_password,
-    #     "list_of_freq" : list_of_freq,
-    #     "list of freq ran" : [],
-    #     "machine" : args.machine,
-    #     "high_power" : args.high_power
-    # }
+    # if not args.powercap:
+    #     list_of_freq = get_available_frequencies()
+    #     list_of_freq.sort(reverse=True)
+    
+    list_of_freq = get_available_frequencies()
+    list_of_freq.sort(reverse=True)
+    
     state["source_dir"] = source_dir
     state["build_dir"] = build_dir
     state["output_dir"] = output_dir
@@ -623,11 +631,12 @@ if __name__ == "__main__":
     state["machine"] = args.machine
     state["high_power"] = args.high_power
     state["powercap"] = args.powercap
-    if args.powercap:
-        power_cap_list = np.linspace(min_power_cap_W(args.machine),get_max_power_cap_W(args.machine),20)
-        state["list of freq or powercap"] = power_cap_list
-    else:
-        state["list of freq or powercap"] = list_of_freq
+    state["list of freq or powercap"] = list_of_freq
+    # if args.powercap:
+    #     power_cap_list = np.linspace(min_power_cap_W(args.machine),get_max_power_cap_W(args.machine),20)
+    #     state["list of freq or powercap"] = power_cap_list
+    # else:
+    #     state["list of freq or powercap"] = list_of_freq
 
     if os.path.exists('energy_validation_state.json'):
         load_state(state, 'energy_validation_state.json')
@@ -643,50 +652,29 @@ if __name__ == "__main__":
     high_power = state["high_power"]
     power_cap_list = []
     list_of_freq = []
-    if powercap:
-        power_cap_list = state["list of freq or powercap"]
-    else:
-        list_of_freq = state["list of freq or powercap"]
-
-    # if not args.no_check:
-    #     check_exp_setup(sudo_password=sudo_password)
-    
-    if args.powercap:
-        for power_cap in power_cap_list:
-            set_power_cap(power_cap=power_cap,sudo_password=sudo_password)
-            constant_power = get_constant_power(machine,sudo_password,60)
-            get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir,
-                                                suffix=f"{power_cap}W",zzz=20,frequency="N/A",energy_mul=get_energy_multiplication_factor(args.machine),
-                                                high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=3,ITR_ENV=ITR_ENV)
-            state["list ran"].append(power_cap)
-            save_state(state, 'energy_validation_state.json')
-            print(f"State saved successfully after running at power cap {power_cap}W")
-    
-    else:
-        for freq in list_of_freq:
-            # print(list_of_freq)
-            # print(freq)
-            if freq in state["list ran"]:
-                print(f"Frequency {freq}kHz already ran.")
-                continue
-            set_frequency(frequency=freq,sudo_password=sudo_password)
-            constant_power = get_constant_power(machine,sudo_password,1)
-            print(f"sleep {zzz} itr {itr}")
-            get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir,
-                                                suffix=f"{freq}kHz",zzz=zzz,frequency=freq,energy_mul=get_energy_multiplication_factor(args.machine),
-                                                high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,ITR_ENV=ITR_ENV)
-            exit()
-            state["list ran"].append(freq)
-            save_state(state, 'energy_validation_state.json')
-            print(f"State saved successfully after running at frequency {freq}kHz")
+    list_of_freq = state["list of freq or powercap"]
+    # if powercap:
+    #     power_cap_list = state["list of freq or powercap"]
     # else:
-    #     print("Frequency not changed.")
-    #     constant_power = get_constant_power(machine,sudo_password,60)
-    #     get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir,
-    #                                         suffix=f"11111",zzz=5,frequency="11111",energy_mul=get_energy_multiplication_factor(args.machine),
-    #                                         high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=3)
-    
-    #delete the state file
+    #     list_of_freq = state["list of freq or powercap"]
+
+    for freq in list_of_freq:
+        # print(list_of_freq)
+        # print(freq)
+        if freq in state["list ran"]:
+            print(f"Frequency {freq}kHz already ran.")
+            continue
+        set_frequency(frequency=freq,sudo_password=sudo_password)
+        constant_power = get_constant_power(machine,sudo_password,1)
+        print(f"sleep {zzz} itr {itr}")
+        get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir,
+                                            suffix=f"{freq}kHz",zzz=zzz,frequency=freq,energy_mul=get_energy_multiplication_factor(args.machine),
+                                            high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,ITR_ENV=ITR_ENV)
+        exit()
+        state["list ran"].append(freq)
+        save_state(state, 'energy_validation_state.json')
+        print(f"State saved successfully after running at frequency {freq}kHz")
+
     os.remove('energy_validation_state.json')
     print("State file deleted successfully.")
     print("=============================================================================")

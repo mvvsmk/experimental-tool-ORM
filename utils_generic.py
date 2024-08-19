@@ -21,3 +21,4 @@ def kill_all_vs_code_server():
         subprocess.run("ps aux | grep .vscode-server | awk '{print $2}' | xargs kill",shell=True, check=True)
     except subprocess.CalledProcessError as e :
         print(f"some error while cleaning vs code server {e}")
+        

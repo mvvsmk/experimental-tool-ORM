@@ -1,0 +1,10 @@
+Name,raptorlake,broadwell
+alexnet_inst,34.96,34.22
+vgg11_bn_inst,49.06,36.18
+vgg11_inst,50.65,36.25
+vgg13_inst,58.98,37.58
+vgg13_bn_inst,55.89,37.61
+vgg16_inst,65.46,39.1
+vgg16_bn_inst,61.79,39.15
+vgg19_bn_inst,70.56,40.36
+vgg19_inst,66.43,40.62

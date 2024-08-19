@@ -19,6 +19,22 @@ from utils_exp_params import *
 from utils_dir import *
 from utils_papi import *
 
+def setup_exp_conditions(exp_conditions, machine, password):
+    for condition in exp_conditions:
+        if condition == "g_userspace":
+            set_governer(governer="userspace", sudo_password=password)
+        elif condition == "no_prefetcher":
+            if machine != "raptorlake":
+                Likwid.disable_prefetchers(sudo_password=password)
+            else :
+                command = "sudo -S wrmsr 420 47"
+                subprocess.run(command, shell=True, check=True, input=password.encode('utf-8'))
+        elif condition == "no_turbo":
+            Likwid.disable_turbo_boost(sudo_password=password)
+        else:
+            print(f"Invalid experimental condition {condition}")
+            exit(1)
+
 def parse_args():
     current_datetime = datetime.datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
@@ -37,7 +53,7 @@ def parse_args():
     parser.add_argument("--freq_change", type=bool, default=False, help="Change the frequency")
     parser.add_argument('-e','--exp_conditions',
                         action='append',
-                        help='what are the experimenatal setup\n g_userspace \n no_prefetcher \n no_turbo+', 
+                        help='what are the experimenatal setup\n g_userspace \n no_prefetcher \n no_turbo', 
                         required=True)
     args = parser.parse_args()
     args.suffix = args.suffix + formatted_datetime
@@ -61,6 +77,7 @@ def main():
     powercap = False
     papi = False
     benchmark = args.benchmarks
+    exp_conditions = args.exp_conditions
     
     #convert all paths to absolute paths
     kernel_dir = os.path.abspath(kernel_dir)
@@ -87,6 +104,9 @@ def main():
     if inst_type == "papi" and freq_change:
         print("Frequency change not supported with papi")
         exit(1)
+        
+    setup_exp_conditions(exp_conditions, machine, password)
+    
     
     if not freq_change:
         exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, benchmark)
