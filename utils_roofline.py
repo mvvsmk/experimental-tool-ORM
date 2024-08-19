@@ -228,14 +228,17 @@ def get_energy_multiplication_factor(machine : str) -> float:
     }
     return multiplier[machine]
 
-def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, TYPE=1) -> None:
+def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> None:
     try:
         print("<------------------------------------------------------------------------>")
         # store the current working directory
         cwd = os.getcwd()
         os.chdir(source_dir)
         asm_file = os.path.join(source_dir,"sumsq.asm")
-        make_sum_squares_asm(flops_per_element=MAD_PER_ELEMENT, output_file=asm_file)
+        if machine == "raptorlake":
+            make_sum_squares_asm_raptorlake(flops_per_element=MAD_PER_ELEMENT, output_file=asm_file)
+        elif machine == "rocketlake":
+            make_sum_squares_asm_rocketlake(flops_per_element=MAD_PER_ELEMENT, output_file=asm_file)
         # get a list of all the items present in the source directory
         old_items = os.listdir(source_dir)
         filename=f"main_{MAD_PER_ELEMENT}"
