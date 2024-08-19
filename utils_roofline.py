@@ -376,7 +376,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     for MAD_PER_ELEMENT in MAD_PER_ELEMENT_values:
         # Likwid.clear_cache()
         print(f"Making benchmarks for MAD_PER_ELEMENT: {MAD_PER_ELEMENT} and ITR_ENV: {ITR_ENV}")
-        make_benchmarks(build_dir,source_dir,MAD_PER_ELEMENT)
+        make_benchmarks(build_dir,source_dir,MAD_PER_ELEMENT,machine=machine)
         print(f"Made benchmarks for MAD_PER_ELEMENT: {MAD_PER_ELEMENT}")
 
     data = {
