@@ -146,8 +146,8 @@ def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_
     output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
     data = {
         "Name" : [],
-        "Energy" : [],
-        "Time" : [],
+        "Energy(J)" : [],
+        "Time(s)" : [],
     }
     list_of_files_to_run = []
     if power_cap_file == None:
@@ -169,8 +169,8 @@ def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_
         print(f"will run : {command}")
         reading = run_with_energy_thread(command=command,password=sudo_password,machine=machine)
         data["Name"].append(file)
-        data["Energy"].append(reading["Energy Reading"])
-        data["Time"].append(reading["Time Reading"])
+        data["Energy(J)"].append(reading["Energy Reading"])
+        data["Time(s)"].append(reading["Time Reading"])
         df = pandas.DataFrame(data)
         df.to_csv(output_file,index=False)
     
@@ -181,9 +181,9 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machi
     mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
     data = {
         "Name" : [],
-        "PowerCap" : [],
-        "Energy" : [],
-        "Time" : [],
+        "PowerCap(W)" : [],
+        "Energy(J)" : [],
+        "Time(s)" : [],
     }
     list_of_files_to_run = []
     output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
@@ -206,9 +206,9 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machi
         print(f"will run : {command}")
         reading = run_with_energy_thread(command=command,password=sudo_password,machine=machine)
         data["Name"].append(row["Name"])
-        data["Energy"].append(reading["Energy Reading"])
-        data["Time"].append(reading["Time Reading"])
-        data["PowerCap"].append(power_cap)
+        data["Energy(J)"].append(reading["Energy Reading"])
+        data["Time(s)"].append(reading["Time Reading"])
+        data["PowerCap(W)"].append(power_cap)
         df = pandas.DataFrame(data)
         df.to_csv(output_file,index=False)
     
