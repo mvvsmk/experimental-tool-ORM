@@ -70,7 +70,7 @@ def run_command_and_get_output(command:str,sudo_password:str):
         exit()
     return output
 
-def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_password,measure_high):
+def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_password):
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
     list_of_papi_counters = get_papi_counters(papi_counters_file)
