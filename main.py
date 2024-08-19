@@ -255,7 +255,9 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
                         #   machine=machine, 
                         #   num_itr=itr, 
                           suffix=suffix + "_mlir", 
-                          sudo_password=password, sleep=10)
+                          sudo_password=password, 
+                        #   sleep=10
+                          )
     
 if __name__ == "__main__":
     main()
