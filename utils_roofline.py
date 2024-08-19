@@ -193,7 +193,7 @@ def get_constant_power(machine : str,sudo_pass :str, duration :str) -> float:
     count = 0
     while count < 3:
         try:
-            output = subprocess.run(f"./constant_power_measurement.sh {sudo_pass} {duration}",shell=True,capture_output=True,check=True)
+            output = subprocess.run(f"./bash/constant_power_measurement.sh {sudo_pass} {duration}",shell=True,capture_output=True,check=True)
         except subprocess.CalledProcessError as e:
             print(f"Error: running constant_power_measurement.sh failed with return code {e.returncode}")
             continue
