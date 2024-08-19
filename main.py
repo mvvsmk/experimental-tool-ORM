@@ -33,7 +33,8 @@ def setup_exp_conditions(exp_conditions, machine, password):
             Likwid.disable_turbo_boost(sudo_password=password)
         else:
             print(f"Invalid experimental condition {condition}")
-            exit(1)
+            print(f"no change {condition}")
+            # exit(1)
 
 def parse_args():
     current_datetime = datetime.datetime.now()
@@ -54,7 +55,7 @@ def parse_args():
     parser.add_argument('-e','--exp_conditions',
                         action='append',
                         help='what are the experimenatal setup\n g_userspace \n no_prefetcher \n no_turbo', 
-                        required=True)
+                        required=False)
     args = parser.parse_args()
     args.suffix = args.suffix + formatted_datetime
     return args
