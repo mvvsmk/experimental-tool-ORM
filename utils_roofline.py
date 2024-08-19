@@ -10,7 +10,7 @@ import pandas as pd
 from utils_freq import get_available_frequencies,set_frequency,set_governer
 from utils_exp_params import check_exp_setup
 from state_load_store import load_state, save_state
-from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell
+from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake
 
 
 
