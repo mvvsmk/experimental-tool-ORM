@@ -105,8 +105,9 @@ def main():
     if inst_type == "papi" and freq_change:
         print("Frequency change not supported with papi")
         exit(1)
-        
-    setup_exp_conditions(exp_conditions, machine, password)
+    
+    if exp_conditions:
+        setup_exp_conditions(exp_conditions, machine, password)
     
     
     if not freq_change:
