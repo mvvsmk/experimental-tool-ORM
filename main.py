@@ -254,6 +254,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         run_mlir_obj_papi(build_dir=build_dir_papi_mlir, output_dir=papi_output_dir, 
                         #   machine=machine, 
                         #   num_itr=itr, 
+                          papi_counters_file=os.path.join(kernel_dir,f"./papi_counters_{machine}.list"),
                           suffix=suffix + "_mlir", 
                           sudo_password=password, 
                         #   sleep=10
