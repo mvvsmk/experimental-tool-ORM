@@ -266,7 +266,15 @@ def make_sum_squares_asm_rocketlake(flops_per_element, output_file):
                                 flops5=flops_strings[4], 
                                 flops6=flops_strings[5], 
                                 flops7=flops_strings[6], 
-                                flops8=flops_strings[7])
+                                flops8=flops_strings[7],
+                                flops9=flops_strings[8],
+                                flops10=flops_strings[9],
+                                flops11=flops_strings[10],
+                                flops12=flops_strings[11],
+                                flops13=flops_strings[12],
+                                flops14=flops_strings[13],
+                                flops15=flops_strings[14],
+                                flops16=flops_strings[15])
     # write final file to sumsq.asm
     with open(output_file, "w") as f:
         f.write(final_file)
@@ -398,7 +406,7 @@ sumsqf:
     for number_flops in array_tracks_flops:
         flop_sring = "\n"
         for i in range(number_flops):
-            j = i % 31
+            j = i % 15
             flop_sring += flop.format(num=j)
         flops_strings.append(flop_sring)
     # print(flops_strings)
@@ -409,15 +417,7 @@ sumsqf:
                                 flops5=flops_strings[4], 
                                 flops6=flops_strings[5], 
                                 flops7=flops_strings[6], 
-                                flops8=flops_strings[7],
-                                flops9=flops_strings[8],
-                                flops10=flops_strings[9],
-                                flops11=flops_strings[10],
-                                flops12=flops_strings[11],
-                                flops13=flops_strings[12],
-                                flops14=flops_strings[13],
-                                flops15=flops_strings[14],
-                                flops16=flops_strings[15])
+                                flops8=flops_strings[7])
     # write final file to sumsq.asm
     with open(output_file, "w") as f:
         f.write(final_file)
