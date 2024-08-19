@@ -150,9 +150,9 @@ def getcache_counter_mapping(machine,cache):
         'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
     },
     "raptorlake" :{
-        'L1' : 'PAPI_LST_INS',
-        'L2' : 'PAPI_L1_DCM',
-        'L3' : 'PAPI_L2_DCM',
+        'L1D' : 'perf::PERF_COUNT_HW_CACHE_L1D:ACCESS',
+        'L2' : 'perf::PERF_COUNT_HW_CACHE_L1D:MISS',
+        'L3' : 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS', # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
         'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
     },
     "rocketlake" :{
@@ -173,10 +173,10 @@ def getcache_array_mapping(machine,cache):
         'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
     },
     "raptorlake" :{
-        'L1' : 'PAPI_LST_INS',
-        'L2' : 'PAPI_L1_DCM',
-        'L3' : 'PAPI_L2_DCM',
-        'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
+        'L1D' : 5120,
+        'L2' : 15872,
+        'L3' : 131072, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
+        'DRAM' : 314572800
     },
     "rocketlake" :{
         'L1D' : 5120,
