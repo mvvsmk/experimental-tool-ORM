@@ -278,6 +278,9 @@ def read_output(filename,
     except subprocess.CalledProcessError as e:
         print(f"Error: running {filename} failed with return code {e.returncode}")
         return []
+    except subprocess.TimeoutExpired as e:
+        print(f"Error: running {filename} failed with timeout")
+        return []
 
 def read_output_pmu_high_power(filename,
                 sudo_password,papi_counter,arr_size, FREQ) -> list[str]:
@@ -294,6 +297,9 @@ def read_output_pmu_high_power(filename,
     except subprocess.CalledProcessError as e:
         print(f"Error: running {filename} failed with return code {e.returncode}")
         return []
+    except subprocess.TimeoutExpired as e:
+        print(f"Error: running {filename} failed with timeout")
+        return []
 
 def read_output_pmu_low_power(filename,
                 sudo_password,papi_counter,arr_size, FREQ) -> list[str]:
@@ -308,6 +314,9 @@ def read_output_pmu_low_power(filename,
         return output_list
     except subprocess.CalledProcessError as e:
         print(f"Error: running {filename} failed with return code {e.returncode}")
+        return []
+    except subprocess.TimeoutExpired as e:
+        print(f"Error: running {filename} failed with timeout")
         return []
 
 
@@ -481,7 +490,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                             if output_list != []:
                                 break
                             count += 1
-                            if count > 10:
+                            if count > 15:
                                 print(f"Error: Running the file {filename}")
                                 exit()
                                 break
