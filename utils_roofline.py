@@ -686,9 +686,10 @@ if __name__ == "__main__":
     print("Energy validation completed successfully.")
     print("=============================================================================")
 
-    Likwid.enable_prefetchers(sudo_password=sudo_password)
-    Likwid.enable_turbo_boost(sudo_password=sudo_password)
-    set_governer(governer="performance", sudo_password=sudo_password)
+    if machine != 'raptorlake' :
+        Likwid.enable_prefetchers(sudo_password=sudo_password)
+        Likwid.enable_turbo_boost(sudo_password=sudo_password)
+        set_governer(governer="performance", sudo_password=sudo_password)
     print("=============================================================================")
 
 
