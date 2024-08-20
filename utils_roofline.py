@@ -11,7 +11,7 @@ from utils_freq import get_available_frequencies,set_frequency,set_governer
 from utils_exp_params import check_exp_setup
 from state_load_store import load_state, save_state
 from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake
-
+from utils_roofline_plot import plot_muliple_roofline
 
 
 base_array_len_a_roofline_energy = 64
@@ -193,7 +193,7 @@ def get_constant_power(machine : str,sudo_pass :str, duration :str) -> float:
     count = 0
     while count < 3:
         try:
-            output = subprocess.run(f"./bash/constant_power_measurement.sh {sudo_pass} {duration}",shell=True,capture_output=True,check=True)
+            output = subprocess.run(f"./bash/constant_power_measurement.sh {sudo_pass} {duration}",shell=True,capture_output=True,check=True,timeout=1200)
         except subprocess.CalledProcessError as e:
             print(f"Error: running constant_power_measurement.sh failed with return code {e.returncode}")
             continue
@@ -269,7 +269,7 @@ def read_output(filename,
         command = f"echo {sudo_password} | sudo -S SIZE_ARR={arr_size}  PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"
         print(f"command : {command}")
         output = subprocess.run([command],
-                                check=True,shell=True,capture_output=True)
+                                check=True,shell=True,capture_output=True,timeout=1200)
         output_list = output.stdout.decode('utf-8').strip().split("\n")
         print("=============================================================================")
         print(f"output_list: {output_list}")
@@ -284,7 +284,7 @@ def read_output_pmu_high_power(filename,
     try:
         # best results obtained when all the low power cores are disabled
         output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_glc SIZE_ARR={arr_size} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
-                                check=True,shell=True,capture_output=True)
+                                check=True,shell=True,capture_output=True,timeout=1200)
         # print(f"output: {output}")
         output_list = output.stdout.decode('utf-8').strip().split("\n")
         print("=============================================================================")
@@ -299,7 +299,7 @@ def read_output_pmu_low_power(filename,
                 sudo_password,papi_counter,arr_size, FREQ) -> list[str]:
     try:
         output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_grt SIZE_ARR={arr_size} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
-                                check=True,shell=True,capture_output=True)
+                                check=True,shell=True,capture_output=True,timeout=1200)
         # print(f"output: {output}")
         output_list = output.stdout.decode('utf-8').strip().split("\n")
         print("=============================================================================")
@@ -664,16 +664,18 @@ if __name__ == "__main__":
     for freq in list_of_freq:
         # print(list_of_freq)
         # print(freq)
+        output_dir_freq = os.path.join(output_dir,f"{freq}kHz")
         if freq in state["list ran"]:
             print(f"Frequency {freq}kHz already ran.")
             continue
         set_frequency(frequency=freq,sudo_password=sudo_password)
         constant_power = get_constant_power(machine,sudo_password,1)
         print(f"sleep {zzz} itr {itr}")
-        get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir,
+        get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir_freq,
                                             suffix=f"{freq}kHz",zzz=zzz,frequency=freq,energy_mul=get_energy_multiplication_factor(args.machine),
                                             high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,ITR_ENV=ITR_ENV)
-        exit()
+        # exit()
+        plot_muliple_roofline(result_folder=output_dir_freq,output_folder=output_dir_freq,machine=machine)
         state["list ran"].append(freq)
         save_state(state, 'energy_validation_state.json')
         print(f"State saved successfully after running at frequency {freq}kHz")

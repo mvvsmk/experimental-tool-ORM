@@ -9,17 +9,9 @@ PASSWORD="1234"
 # List of types
 strings=("fma_avx_300")
 
-# Array of iterations
-# iterations=(100)
-# iterations=(200 400 600 800 1000 1200)
-# iterations=(1073741824 2147483648 10737418240 21474836480 107374182400 214748364800 )
-# iterations=(1073741824 2147483648)
 iterations=(10)
-#           102400000
-# iterations=(2)
 
-# Array of sleep times
-sleep_times=(10 , 20 )
+sleep_times=(10 20)
 
 # Loop through each string
 for str in "${strings[@]}"; do
@@ -44,9 +36,7 @@ for str in "${strings[@]}"; do
       echo $PASSWORD | sudo -S likwid-features -l -c N > ${FOLDER_NAME}/likwid_features.txt 2>&1
       echo $PASSWORD | sudo -S rdmsr -u 420 > ${FOLDER_NAME}/preftcher_features.txt 2>&1
       
-      ./utils_roofline.py --source_dir ${SOURCE_DIR} --output_dir ${FOLDER_NAME} --machine ${MACHINE} --build_dir "${DATE}_bin_test" --password ${PASSWORD} --iterations ${ITRS} --sleep_time ${SLEEP_TIME} --env_ITR 1  #> ${FOLDER_NAME}/log.txt 2>&1
-      ./energy_results/plot_energy_comp.py --result_folder ${FOLDER_NAME} --machine ${MACHINE} --output_folder ${FOLDER_NAME}
-      
+      ./utils_roofline.py --source_dir ${SOURCE_DIR} --output_dir ${FOLDER_NAME} --machine ${MACHINE} --build_dir "${DATE}_bin_test" --password ${PASSWORD} --iterations ${ITRS} --sleep_time ${SLEEP_TIME} --env_ITR 1  #> ${FOLDER_NAME}/log.txt 2>&1      
     done
   done
 done

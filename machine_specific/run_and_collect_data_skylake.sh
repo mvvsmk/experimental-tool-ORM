@@ -20,7 +20,7 @@ for str in "${strings[@]}"; do
 
   sleep 120
   ./energy_validate.py --source_dir ${SOURCE_DIR} --output_dir ${FOLDER_NAME} --machine ${MACHINE} --build_dir "${DATE}_bin_test" --password ${PASSWORD} > ${FOLDER_NAME}/log.txt 2>&1
-  ./energy_results/plot_energy_comp.py --result_folder ${FOLDER_NAME} --machine ${MACHINE} --output_folder ${FOLDER_NAME} 
+  # ./energy_results/plot_energy_comp.py --result_folder ${FOLDER_NAME} --machine ${MACHINE} --output_folder ${FOLDER_NAME} 
 done
 
 ./awm.py --machine ${MACHINE} --polybench --time_oracle  --password ${PASSWORD}
