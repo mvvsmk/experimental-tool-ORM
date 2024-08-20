@@ -674,6 +674,7 @@ if __name__ == "__main__":
         # print(list_of_freq)
         # print(freq)
         output_dir_freq = os.path.join(output_dir,f"{freq}kHz")
+        os.makedirs(output_dir_freq,exist_ok=True)
         if freq in state["list ran"]:
             print(f"Frequency {freq}kHz already ran.")
             continue
