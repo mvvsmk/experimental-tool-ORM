@@ -1,5 +1,5 @@
 import os
-import sys as sys_time
+import time
 import subprocess
 import pandas as pd
 from state_load_store import save_state
@@ -19,7 +19,7 @@ def run_kernels_papi(build_dir, output_dir,num_iterations, suffix, sleep, passwo
 
     # Loop through each file in the build directory
     for file in os.listdir(build_dir):
-        sys_time.sleep(sleep)
+        time.sleep(sleep)
         # Construct the full path for the binary file
         binary_file_path = os.path.abspath(os.path.join(build_dir, file))
 
