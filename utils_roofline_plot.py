@@ -65,19 +65,6 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
     fig.suptitle(f"Energy, Power, and Performance comparison for {machine} machine")
     fig.dpi = 1000
 
-    # the files have the following columns
-    #Frequency(kHz),Execution Time(s),Energy(J),Power(W),total_flops,total_missed_bytes,OI
-    # I need 3 plots one is the Energy plot ie y-axis is Energy(J) and x-axis is OI
-    # the other is the Power plot ie y-axis is Power(W) and x-axis is OI
-    # the other is the Execution Time plot ie y-axis is Performance(flops/s) and x-axis is OI
-    # the x-axis should be log scaled
-    # the y-axis should be log scaled
-    # the axes should be labeled
-    # the title should be Energy plot , Power plot and Performance plot
-    # grid lines should be shown for both major and minor ticks
-    # all the minor tics in the y-axis should be shown
-
-    # plot the energy plot
 
     for i, freq in enumerate(frequencies):
         ax[0, 0].plot(data[i][1]["OI"], data[i][1]["Energy(J)"], label=f"{data[i][0]}", color=colors[i], marker="o")

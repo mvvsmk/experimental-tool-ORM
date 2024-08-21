@@ -12,9 +12,60 @@ from utils_exp_params import check_exp_setup
 from state_load_store import load_state, save_state
 from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake
 from utils_roofline_plot import plot_muliple_roofline
-
+import psutil
 
 base_array_len_a_roofline_energy = 64
+
+def run_command_and_monitor(command, sudo_password):
+
+    # Start the process
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setpgrp)
+    process_psutil = psutil.Process(process.pid)
+    
+    start_time = time.time()
+    timeout = 1200  # Timeout after 1200 seconds (20 minutes)
+
+    while True:
+        time.sleep(600)  # Check every 5 seconds
+
+        #check if all the children of the process and the process is sleeping then kill the proceess and all the childeren
+        all_sleeping = True
+        if process_psutil.status() == psutil.STATUS_SLEEPING:
+            for child in process_psutil.children(recursive=True):
+                print(f"Child: {child}")
+                if child.status() == psutil.STATUS_SLEEPING:
+                    print("Process is sleeping.")
+                else:
+                    all_sleeping = False
+                    break
+            if all_sleeping:
+                print("Process is sleeping. Sending SIGTERM with sudo...")
+                # Send SIGTERM to the process with sudo privileges
+                kill_command = f"echo {sudo_password} | sudo -S kill -TERM {process.pid}"
+                os.system(kill_command)
+                # Wait for the process to fully terminate
+                process.wait()
+                break
+                    
+        # Check if the process has completed
+        if process.poll() is not None:
+            break
+        
+        # Check for timeout
+        if time.time() - start_time > timeout:
+            print("Process timed out. Terminating with sudo...")
+            kill_command = f"echo {sudo_password} | sudo -S kill -TERM {process.pid}"
+            os.system(kill_command)
+            process.wait()
+            break
+
+    stdout, stderr = process.communicate()
+
+    if process.returncode != 0:
+        raise subprocess.CalledProcessError(process.returncode, command, output=stdout, stderr=stderr)
+    
+    return stdout, stderr
+
 
 machine_data_cache = {
     'broadwell': {
@@ -124,6 +175,15 @@ machine_data_cache = {
 
 }
 
+def get_time_duration(cache):
+    data = {
+        'L1D' : 0.001,
+        'L2' : 0.01,
+        'L3' : 0.5,
+        'DRAM' : 0.5,
+    }
+    return data[cache]
+        
 
 def get_max_power_cap_W(machine):
     data = {
@@ -173,9 +233,9 @@ def getcache_array_mapping(machine,cache):
         'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
     },
     "raptorlake" :{
-        'L1D' : 5120,
-        'L2' : 15872,
-        'L3' : 131072, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
+        'L1D' : 768,
+        'L2' : 8192,
+        'L3' : 196608, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
         'DRAM' : 314572800
     },
     "rocketlake" :{
@@ -186,7 +246,6 @@ def getcache_array_mapping(machine,cache):
     },
     }
     return data[machine][cache]
-
 
 def get_constant_power(machine : str,sudo_pass :str, duration :str) -> float:
     energy_output = [0,0,0]
@@ -264,13 +323,14 @@ def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> No
 
 
 def read_output(filename,
-                sudo_password,papi_counter,FREQ,arr_size) -> list[str]:
+                sudo_password,papi_counter,FREQ,arr_size, dur) -> list[str]:
     try:
-        command = f"echo {sudo_password} | sudo -S SIZE_ARR={arr_size}  PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"
+        command = f"echo {sudo_password} | sudo -S SIZE_ARR={arr_size} DUR={dur}  PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"
         print(f"command : {command}")
-        output = subprocess.run([command],
-                                check=True,shell=True,capture_output=True,timeout=1200)
-        output_list = output.stdout.decode('utf-8').strip().split("\n")
+        # output = subprocess.run([command],
+        #                         check=True,shell=True,capture_output=True,timeout=1200)
+        output_stdout, output_stderr = run_command_and_monitor(command, sudo_password)
+        output_list = output_stdout.decode('utf-8').strip().split("\n")
         print("=============================================================================")
         print(f"output_list: {output_list}")
         print("=============================================================================")
@@ -283,10 +343,10 @@ def read_output(filename,
         return []
 
 def read_output_pmu_high_power(filename,
-                sudo_password,papi_counter,arr_size, FREQ) -> list[str]:
+                sudo_password,papi_counter,arr_size, FREQ, dur) -> list[str]:
     try:
         # best results obtained when all the low power cores are disabled
-        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_glc SIZE_ARR={arr_size} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
+        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_glc SIZE_ARR={arr_size} DUR={dur} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
                                 check=True,shell=True,capture_output=True,timeout=1200)
         # print(f"output: {output}")
         output_list = output.stdout.decode('utf-8').strip().split("\n")
@@ -302,9 +362,9 @@ def read_output_pmu_high_power(filename,
         return []
 
 def read_output_pmu_low_power(filename,
-                sudo_password,papi_counter,arr_size, FREQ) -> list[str]:
+                sudo_password,papi_counter,arr_size, FREQ, dur) -> list[str]:
     try:
-        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_grt SIZE_ARR={arr_size} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
+        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_grt SIZE_ARR={arr_size} DUR={dur} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
                                 check=True,shell=True,capture_output=True,timeout=1200)
         # print(f"output: {output}")
         output_list = output.stdout.decode('utf-8').strip().split("\n")
@@ -437,6 +497,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
             papi_counter = getcache_counter_mapping(machine=machine,cache=cache)
             array_len = getcache_array_mapping(machine=machine,cache=cache)
             array_sizes_to_run = [array_len]
+            dur = get_time_duration(cache)
             print(f"array_sizes_to_run: {array_sizes_to_run}")
             #print current cache level
             print(f"cache: {cache}")
@@ -476,17 +537,17 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                                     output_list = read_output_pmu_high_power(filename=filename,
                                                                             sudo_password=sudo_password,
                                                                             papi_counter=papi_counter,
-                                                                            arr_size=array_size, FREQ=int(frequency*1000))
+                                                                            arr_size=array_size, FREQ=int(frequency*1000),dur=dur)
                                 else:
                                     output_list = read_output(filename=filename,
                                                             sudo_password=sudo_password,
                                                             papi_counter=papi_counter,
-                                                            arr_size=array_size, FREQ=int(frequency*1000))
+                                                            arr_size=array_size, FREQ=int(frequency*1000),dur=dur)
                             else :
                                 output_list = read_output(filename=filename,
                                                         sudo_password=sudo_password,
                                                         papi_counter=papi_counter,
-                                                        arr_size=array_size, FREQ=int(frequency*1000))
+                                                        arr_size=array_size, FREQ=int(frequency*1000),dur=dur)
                             if output_list != []:
                                 break
                             count += 1
@@ -624,10 +685,6 @@ if __name__ == "__main__":
     else:
         print(f"{source_dir} exists.")
 
-
-
-    Likwid.disable_prefetchers(sudo_password=sudo_password)
-    Likwid.disable_turbo_boost(sudo_password=sudo_password)
     set_governer(governer="userspace", sudo_password=sudo_password)
     # if not args.powercap:
     #     list_of_freq = get_available_frequencies()
@@ -650,6 +707,7 @@ if __name__ == "__main__":
     # else:
     #     state["list of freq or powercap"] = list_of_freq
 
+
     if os.path.exists('energy_validation_state.json'):
         load_state(state, 'energy_validation_state.json')
         print("State loaded successfully.")
@@ -670,9 +728,14 @@ if __name__ == "__main__":
     # else:
     #     list_of_freq = state["list of freq or powercap"]
 
+    if machine != 'raptorlake' :
+        Likwid.disable_prefetchers(sudo_password=sudo_password)
+    else :
+        command = "sudo -S wrmsr 420 47"
+        subprocess.run(command, shell=True, check=True, input=sudo_password.encode('utf-8'))
+    Likwid.disable_turbo_boost(sudo_password=sudo_password)
+
     for freq in list_of_freq:
-        # print(list_of_freq)
-        # print(freq)
         output_dir_freq = os.path.join(output_dir,f"{freq}kHz")
         os.makedirs(output_dir_freq,exist_ok=True)
         if freq in state["list ran"]:
