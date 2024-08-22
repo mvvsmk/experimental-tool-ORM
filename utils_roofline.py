@@ -40,12 +40,12 @@ def run_command_and_monitor(command, sudo_password):
                     break
             if all_sleeping:
                 print("Process is sleeping. Sending SIGTERM with sudo...")
-                # Send SIGTERM to the process with sudo privileges
-                kill_command = f"echo {sudo_password} | sudo -S kill -TERM {process.pid}"
-                os.system(kill_command)
-                # Wait for the process to fully terminate
-                process.wait()
-                break
+                #go to the inner most child and kill it
+                collection = [child for child in process_psutil.children(recursive=True)]
+                # kill all children starting from the inner most child
+                for child in collection[::-1]:
+                    kill_command = f"echo {sudo_password} | sudo -S kill -TERM {child.pid}"
+                    os.system(kill_command)
                     
         # Check if the process has completed
         if process.poll() is not None:

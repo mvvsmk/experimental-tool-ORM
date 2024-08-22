@@ -70,11 +70,12 @@ def run_command_and_get_output(command:str,sudo_password:str):
         exit()
     return output
 
-def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_password):
+def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_password,itr = 1):
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
     list_of_papi_counters = get_papi_counters(papi_counters_file)
     output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
+    output_file_median = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}_median.csv")
     if os.path.isfile(output_file):
         df_old = pandas.read_csv(output_file)
     else :
@@ -87,10 +88,26 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_passwo
         data[counter] = []
     data["Name"] = []
     
+    files_run = []
+    if os.path.isfile(output_file):
+        files_run = df_old["Name"].unique()
+        df_old = pandas.read_csv(output_file)
+        #iterate through all the unique names in the dataframe
+        for name in df_old["Name"].unique():
+            itr_count = (df['Name'] == name).sum()
+            if itr_count < itr :
+                df_old = df_old[df_old["Name"] != name]
+                files_run = files_run.remove(name)
+            
+        data = df_old.to_dict()
+    else :
+        df_old = None
+
+
+    
     for file in os.listdir(build_dir):
         # if file.endswith("_inst") and "alexnet" in file:
         if file.endswith("_inst") :
-            file_runs = True
             if df_old.size > 0 :
                 already_run = df_old["Name"].unique()
                 already_run = [os.path.basename(x) for x in already_run]
@@ -102,48 +119,59 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_passwo
             mlir_baseName = os.path.basename(mlir_file)
             mlir_baseName = os.path.splitext(mlir_baseName)[0]
             mlir_baseName = os.path.join(build_dir,mlir_baseName)
-            for counter in list_of_papi_counters:
-                pmu_required = False
-                augment_env = f" LD_LIBRARY_PATH={mlir_runner_libs}:$LD_LIBRARY_PATH LIBRARY_PATH={mlir_runner_libs}:$LIBRARY_PATH "
-                if "::" in counter and "perf" not in counter :
-                    PMU = counter.split("::")[0]
-                    print(PMU)
-                    augment_env = augment_env + f" LIBPFM_FORCE_PMU={PMU} "
-                    
-                # exit()
-                #if measure_high :
-                #    augment_env = augment_env + f" LIBPFM_FORCE_PMU=adl_glc "
-                command = f"sudo -S {augment_env} PAPI_EVENT_NAME={counter} {mlir_file}"
-                print(f"will run : {command}")
-                # continue
-                try:
-                    # output = run_command_and_get_output(command=command,sudo_password=sudo_password)
-                    output = subprocess.run(command,shell=True,capture_output=True,input=sudo_password.encode("utf-8"),timeout=28800)
-                    output_list = output.stdout.decode().split()
-                    print(f"counter {counter} value {output_list[-1]}")
-                    data[counter].append(output_list[-1])
-                except Exception as e:
-                    print(f"Exception occured while running {mlir_file} with {counter} : {e}")
-                    file_runs = False
-                    continue
-            if file_runs :
-                data["Name"].append(mlir_baseName)
-                print(data)
-                try :
-                    df = pandas.DataFrame(data)
-                    df.to_csv(output_file)
-                except Exception as e :
-                    with open("error.json","w") as error_out:
-                        json.dump(df,error_out)
-                
+            if mlir_baseName in files_run :
+                print(f"already run {mlir_baseName}")
+                continue
+            for i in range(itr):
+                file_runs = True
+                for counter in list_of_papi_counters:
+                    pmu_required = False
+                    augment_env = f" LD_LIBRARY_PATH={mlir_runner_libs}:$LD_LIBRARY_PATH LIBRARY_PATH={mlir_runner_libs}:$LIBRARY_PATH "
+                    if "::" in counter and "perf" not in counter :
+                        PMU = counter.split("::")[0]
+                        print(PMU)
+                        augment_env = augment_env + f" LIBPFM_FORCE_PMU={PMU} "
+                        
+                    # exit()
+                    #if measure_high :
+                    #    augment_env = augment_env + f" LIBPFM_FORCE_PMU=adl_glc "
+                    command = f"sudo -S {augment_env} PAPI_EVENT_NAME={counter} {mlir_file}"
+                    print(f"will run : {command}")
+                    # continue
+                    try:
+                        # output = run_command_and_get_output(command=command,sudo_password=sudo_password)
+                        output = subprocess.run(command,shell=True,capture_output=True,input=sudo_password.encode("utf-8"),timeout=28800)
+                        output_list = output.stdout.decode().split()
+                        print(f"counter {counter} value {output_list[-1]}")
+                        data[counter].append(output_list[-1])
+                    except Exception as e:
+                        print(f"Exception occured while running {mlir_file} with {counter} : {e}")
+                        file_runs = False
+                        continue
+                if file_runs :
+                    data["Name"].append(mlir_baseName)
+                    print(data)
+                    try :
+                        df = pandas.DataFrame(data)
+                        df.to_csv(output_file)
+                    except Exception as e :
+                        with open("error.json","w") as error_out:
+                            json.dump(df,error_out)
+    
+    # group the data by the name of the file and take the median of the values
+    df = pandas.read_csv(output_file)
+    df = df.groupby("Name").median()
+    df.to_csv(output_file_median)        
     print(f"Output written to {output_file}")
-    return output_file
+    print(f"Output median written to {output_file_median}")
+    return output_file_median
 
-def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_cap_file = None, sleep_time=10):
+def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_cap_file = None, sleep_time=10,itr = 1):
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
     
     output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
+    output_file_median = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}_median.csv")
     data = {
         "Name" : [],
         "Energy(J)" : [],
@@ -159,24 +187,45 @@ def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_
     
     print(f"files to run {list_of_files_to_run}")
     
+    files_run = []
+    if os.path.isfile(output_file):
+        df = pandas.read_csv(output_file)
+        files_run = df["Name"].unique()
+        files_run = [os.path.basename(x) for x in files_run]
+        for file in df["Name"].unique():
+            itr_count = (df['Name'] == file).sum()
+            if itr_count < itr :
+                df = df[df["Name"] != file]
+                files_run = files_run.remove(file)
+        data = df.to_dict()
+    
     for i, file in enumerate(list_of_files_to_run):
+        if file in files_run :
+            print(f"already run {file}")
+            continue
         mlir_file = os.path.join(build_dir,file)
         mlir_baseName = os.path.basename(mlir_file)
         mlir_baseName = os.path.splitext(mlir_baseName)[0]
         mlir_baseName = os.path.join(build_dir,mlir_baseName)
-        augment_env = f" LD_LIBRARY_PATH={mlir_runner_libs}:$LD_LIBRARY_PATH LIBRARY_PATH={mlir_runner_libs}:$LIBRARY_PATH "
-        command = f"sudo -S {augment_env} taskset -c 0 {mlir_file}"
-        print(f"will run : {command}")
-        reading = run_with_energy_thread(command=command,password=sudo_password,machine=machine)
-        data["Name"].append(file)
-        data["Energy(J)"].append(reading["Energy Reading"])
-        data["Time(s)"].append(reading["Time Reading"])
-        df = pandas.DataFrame(data)
-        df.to_csv(output_file,index=False)
+        for i in range(itr):
+            augment_env = f" LD_LIBRARY_PATH={mlir_runner_libs}:$LD_LIBRARY_PATH LIBRARY_PATH={mlir_runner_libs}:$LIBRARY_PATH "
+            command = f"sudo -S {augment_env} taskset -c 0 {mlir_file}"
+            print(f"will run : {command}")
+            reading = run_with_energy_thread(command=command,password=sudo_password,machine=machine)
+            data["Name"].append(file)
+            data["Energy(J)"].append(reading["Energy Reading"])
+            data["Time(s)"].append(reading["Time Reading"])
+            df = pandas.DataFrame(data)
+            df.to_csv(output_file,index=False)
     
     print(f"oracle collected in file {output_file}")
+    #take median group by name
+    df = pandas.read_csv(output_file)
+    df = df.groupby("Name").median()
+    df.to_csv(output_file_median)
+    print(f"oracle collected in file {output_file_median}")
 
-def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machine,suffix=""):
+def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machine,suffix="",itr = 1):
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
     data = {
@@ -187,32 +236,62 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machi
     }
     list_of_files_to_run = []
     output_file = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}.csv")
+    output_file_median = os.path.join(output_dir,f"MODEL_ORACLE_{suffix}_median.csv")
     power_cap_df = pandas.read_csv(powercap_file)
     list_of_files_to_run = list(power_cap_df["Name"].unique())
     
     print(f"files to run {list_of_files_to_run}")
     
+    files_run = []
+    if os.path.isfile(output_file):
+        df = pandas.read_csv(output_file)
+        files_run = df["Name"].unique()
+        files_run = [os.path.basename(x) for x in files_run]
+        for file in df["Name"].unique():
+            itr_count = (df['Name'] == file).sum()
+            if itr_count < itr :
+                df = df[df["Name"] != file]
+                files_run = files_run.remove(file)
+        data = df.to_dict()
+    
     # for i, file in enumerate(list_of_files_to_run):
     for index, row in power_cap_df.iterrows():
-        power_cap = row[machine]
-        powercap_uW = power_cap * 1000000
-        set_power_cap(power_cap=powercap_uW,sudo_password=sudo_password)
-        mlir_file = os.path.join(build_dir,row["Name"])
-        mlir_baseName = os.path.basename(mlir_file)
-        mlir_baseName = os.path.splitext(mlir_baseName)[0]
-        mlir_baseName = os.path.join(build_dir,mlir_baseName)
-        augment_env = f" LD_LIBRARY_PATH={mlir_runner_libs}:$LD_LIBRARY_PATH LIBRARY_PATH={mlir_runner_libs}:$LIBRARY_PATH "
-        command = f"sudo -S {augment_env} {mlir_file}"
-        print(f"will run : {command}")
-        reading = run_with_energy_thread(command=command,password=sudo_password,machine=machine)
-        data["Name"].append(row["Name"])
-        data["Energy(J)"].append(reading["Energy Reading"])
-        data["Time(s)"].append(reading["Time Reading"])
-        data["PowerCap(W)"].append(power_cap)
-        df = pandas.DataFrame(data)
-        df.to_csv(output_file,index=False)
+        if row["Name"] in files_run :
+            print(f"already run {row['Name']}")
+            continue
+        for i in range(itr):
+            power_cap = row[machine]
+            # if power cap is NC
+            if power_cap == "NC" or power_cap[0].isalpha():
+                data["Name"].append(row["Name"])
+                data["Energy(J)"].append(0)
+                data["Time(s)"].append(0)
+                data["PowerCap(W)"].append(0)
+                df = pandas.DataFrame(data)
+                df.to_csv(output_file,index=False)
+                continue
+            powercap_uW = power_cap * 1000000
+            set_power_cap(power_cap=powercap_uW,sudo_password=sudo_password)
+            mlir_file = os.path.join(build_dir,row["Name"])
+            mlir_baseName = os.path.basename(mlir_file)
+            mlir_baseName = os.path.splitext(mlir_baseName)[0]
+            mlir_baseName = os.path.join(build_dir,mlir_baseName)
+            augment_env = f" LD_LIBRARY_PATH={mlir_runner_libs}:$LD_LIBRARY_PATH LIBRARY_PATH={mlir_runner_libs}:$LIBRARY_PATH "
+            command = f"sudo -S {augment_env} {mlir_file}"
+            print(f"will run : {command}")
+            reading = run_with_energy_thread(command=command,password=sudo_password,machine=machine)
+            data["Name"].append(row["Name"])
+            data["Energy(J)"].append(reading["Energy Reading"])
+            data["Time(s)"].append(reading["Time Reading"])
+            data["PowerCap(W)"].append(power_cap)
+            df = pandas.DataFrame(data)
+            df.to_csv(output_file,index=False)
     
-    print(f"oracle collected in file {output_file}")
+    print(f"Result collected in file {output_file}")
+    #group by name and take median
+    df = pandas.read_csv(output_file)
+    df = df.groupby("Name").median()
+    df.to_csv(output_file_median)
 
 if __name__ == "__main__" :
     # parse_args()

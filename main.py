@@ -18,6 +18,7 @@ from utils_freq import *
 from utils_exp_params import *
 from utils_dir import *
 from utils_papi import *
+from utils_state import *
 
 def setup_exp_conditions(exp_conditions, machine, password):
     for condition in exp_conditions:
@@ -79,6 +80,51 @@ def main():
     papi = False
     benchmark = args.benchmarks
     exp_conditions = args.exp_conditions
+    frequencies_run = []
+    
+    # check if state.json exists
+    if os.path.exists("state.json"):
+        state = {}
+        load_state(state=state,file="state.json")
+        machine = state["machine"]
+        powercap_file = state["powercap_file"]
+        kernel_dir = state["kernel_dir"]
+        build_dir = state["build_dir"]
+        dataset = state["dataset"]
+        data_type = state["data_type"]
+        suffix = state["suffix"]
+        password = state["password"]
+        inst_type = state["inst_type"]
+        itr = state["itr"]
+        freq_change = state["freq_change"]
+        oracle = state["oracle"]
+        powercap = state["powercap"]
+        papi = state["papi"]
+        benchmark = state["benchmark"]
+        exp_conditions = state["exp_conditions"]
+        frequencies_run = state["frequencies_run"]
+        
+    else :
+        state = {
+            "machine":machine,
+            "powercap_file":powercap_file,
+            "kernel_dir":kernel_dir,
+            "build_dir":build_dir,
+            "dataset":dataset,
+            "data_type":data_type,
+            "suffix":suffix,
+            "password":password,
+            "inst_type":inst_type,
+            "itr":itr,
+            "freq_change":freq_change,
+            "oracle":oracle,
+            "powercap":powercap,
+            "papi":papi,
+            "benchmark":benchmark,
+            "exp_conditions":exp_conditions,
+            "frequencies_run":frequencies_run
+        }
+        save_state(state=state,file="state.json")
     
     #convert all paths to absolute paths
     kernel_dir = os.path.abspath(kernel_dir)
@@ -116,9 +162,17 @@ def main():
         available_frequencies = get_available_frequencies(machine, password)
         available_frequencies = sorted(available_frequencies, reverse=True)
         for freq in available_frequencies:
+            if freq in frequencies_run:
+                print(f"Skipping frequency {freq}")
+                continue
             set_frequency(freq, machine, password)
             exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suffix + f"_{freq}", password, itr, oracle, powercap, papi, benchmark)
-    
+            frequencies_run.append(freq)
+            save_state(state=state,file="state.json")
+    # remove the state file
+    os.remove("state.json")
+
+ 
 def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, benchmark):
     # First let's capture oracle data
     if oracle and benchmark == "Polybench":
@@ -275,7 +329,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         build_dir_papi_mlir = compile_obj_with_instumentation(src_dir=mlir_src, build_dir=build_dir_papi,inst_type="papi")
         run_mlir_obj_papi(build_dir=build_dir_papi_mlir, output_dir=papi_output_dir, 
                         #   machine=machine, 
-                        #   num_itr=itr, 
+                        #   itr=itr, 
                           papi_counters_file=os.path.join(kernel_dir,f"./papi_counters_{machine}.list"),
                           suffix=suffix + "_mlir", 
                           sudo_password=password, 
