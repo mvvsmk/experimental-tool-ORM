@@ -2,7 +2,7 @@ import os
 import time
 import subprocess
 import pandas as pd
-from state_load_store import save_state
+from utils_state import save_state
 
 # Function to run all the polybench kernels and collect the output
 def run_kernels_papi(build_dir, output_dir,num_iterations, suffix, sleep, password, high_performance_cores):

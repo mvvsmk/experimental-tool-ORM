@@ -135,7 +135,7 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_passwo
                     # exit()
                     #if measure_high :
                     #    augment_env = augment_env + f" LIBPFM_FORCE_PMU=adl_glc "
-                    command = f"sudo -S {augment_env} PAPI_EVENT_NAME={counter} {mlir_file}"
+                    command = f"sudo -S {augment_env} PAPI_EVENT_NAME={counter} taskset -c 0 {mlir_file}"
                     print(f"will run : {command}")
                     # continue
                     try:

@@ -9,8 +9,8 @@ from utils_likwid import Likwid
 import pandas as pd
 from utils_freq import get_available_frequencies,set_frequency,set_governer
 from utils_exp_params import check_exp_setup
-from state_load_store import load_state, save_state
-from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake
+from utils_state import load_state, save_state
+from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell
 from utils_roofline_plot import plot_muliple_roofline
 import psutil
 
@@ -26,7 +26,7 @@ def run_command_and_monitor(command, sudo_password):
     timeout = 1200  # Timeout after 1200 seconds (20 minutes)
 
     while True:
-        time.sleep(600)  # Check every 5 seconds
+        time.sleep(5)  # Check every 5 seconds
 
         #check if all the children of the process and the process is sleeping then kill the proceess and all the childeren
         all_sleeping = True
@@ -40,12 +40,12 @@ def run_command_and_monitor(command, sudo_password):
                     break
             if all_sleeping:
                 print("Process is sleeping. Sending SIGTERM with sudo...")
-                #go to the inner most child and kill it
-                collection = [child for child in process_psutil.children(recursive=True)]
-                # kill all children starting from the inner most child
-                for child in collection[::-1]:
-                    kill_command = f"echo {sudo_password} | sudo -S kill -TERM {child.pid}"
-                    os.system(kill_command)
+                # Send SIGTERM to the process with sudo privileges
+                kill_command = f"echo {sudo_password} | sudo -S kill -TERM {process.pid}"
+                os.system(kill_command)
+                # Wait for the process to fully terminate
+                process.wait()
+                break
                     
         # Check if the process has completed
         if process.poll() is not None:
@@ -177,10 +177,10 @@ machine_data_cache = {
 
 def get_time_duration(cache):
     data = {
-        'L1D' : 0.001,
-        'L2' : 0.01,
-        'L3' : 0.5,
-        'DRAM' : 0.5,
+        'L1D' : 70000,
+        'L2' : 1000,
+        'L3' : 100,
+        'DRAM' : 1,
     }
     return data[cache]
         
@@ -298,6 +298,8 @@ def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> No
             make_sum_squares_asm_raptorlake(flops_per_element=MAD_PER_ELEMENT, output_file=asm_file)
         elif machine == "rocketlake":
             make_sum_squares_asm_rocketlake(flops_per_element=MAD_PER_ELEMENT, output_file=asm_file)
+        elif machine == "broadwell":
+            make_sum_squares_asm_broadwell(flops_per_element=MAD_PER_ELEMENT, output_file=asm_file)
         # get a list of all the items present in the source directory
         old_items = os.listdir(source_dir)
         filename=f"main_{MAD_PER_ELEMENT}"
@@ -327,10 +329,11 @@ def read_output(filename,
     try:
         command = f"echo {sudo_password} | sudo -S SIZE_ARR={arr_size} DUR={dur}  PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"
         print(f"command : {command}")
-        # output = subprocess.run([command],
-        #                         check=True,shell=True,capture_output=True,timeout=1200)
-        output_stdout, output_stderr = run_command_and_monitor(command, sudo_password)
-        output_list = output_stdout.decode('utf-8').strip().split("\n")
+        output = subprocess.run([command],
+                                check=True,shell=True,capture_output=True,timeout=600)
+        # output_stdout, output_stderr = run_command_and_monitor(command, sudo_password)
+        output_list = output.stdout.decode('utf-8').strip().split("\n")
+        # output_list = output_stdout.decode('utf-8').strip().split("\n")
         print("=============================================================================")
         print(f"output_list: {output_list}")
         print("=============================================================================")
@@ -340,6 +343,11 @@ def read_output(filename,
         return []
     except subprocess.TimeoutExpired as e:
         print(f"Error: running {filename} failed with timeout")
+        kill_command = f"echo {sudo_password} | sudo pkill -f -15 {filename}"
+        try :
+            subprocess.run(kill_command,check=True,shell=True)
+        except subprocess.CalledProcessError as e :
+            print(f"Error in killing the timed out process {e}")
         return []
 
 def read_output_pmu_high_power(filename,
@@ -432,7 +440,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
 
     output_file = os.path.join(output_dir,f"a_roofline_model_for_energy_benchmarks_{suffix}.csv")
     
-    MAD_PER_ELEMENT_values = np.logspace(0,5,30,base=10).astype(int)
+    MAD_PER_ELEMENT_values = np.logspace(0,5,25,base=10).astype(int)
     # MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[1,2,3,4,5,6,7,8,9])
     # MAD_PER_ELEMENT_values = [1, 10 ,100, 1000, 10000]
     Mad_PER_ELEMENT_values = list(set(MAD_PER_ELEMENT_values))
@@ -548,7 +556,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                                                         sudo_password=sudo_password,
                                                         papi_counter=papi_counter,
                                                         arr_size=array_size, FREQ=int(frequency*1000),dur=dur)
-                            if output_list != []:
+                            if output_list != [] and output_list != ['']:
                                 break
                             count += 1
                             if count > 15:
@@ -747,8 +755,8 @@ if __name__ == "__main__":
         get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir_freq,
                                             suffix=f"{freq}kHz",zzz=zzz,frequency=freq,energy_mul=get_energy_multiplication_factor(args.machine),
                                             high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,ITR_ENV=ITR_ENV)
-        # exit()
         plot_muliple_roofline(result_folder=output_dir_freq,output_folder=output_dir_freq,machine=machine)
+        exit()
         state["list ran"].append(freq)
         save_state(state, 'energy_validation_state.json')
         print(f"State saved successfully after running at frequency {freq}kHz")
