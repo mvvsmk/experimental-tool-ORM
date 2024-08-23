@@ -327,7 +327,7 @@ def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> No
 def read_output(filename,
                 sudo_password,papi_counter,FREQ,arr_size, dur) -> list[str]:
     try:
-        command = f"echo {sudo_password} | sudo -S SIZE_ARR={arr_size} DUR={dur}  PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"
+        command = f"echo {sudo_password} | sudo -S SIZE_ARR={arr_size} ITRS={dur}  PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"
         print(f"command : {command}")
         output = subprocess.run([command],
                                 check=True,shell=True,capture_output=True,timeout=600)
@@ -354,7 +354,7 @@ def read_output_pmu_high_power(filename,
                 sudo_password,papi_counter,arr_size, FREQ, dur) -> list[str]:
     try:
         # best results obtained when all the low power cores are disabled
-        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_glc SIZE_ARR={arr_size} DUR={dur} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
+        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_glc SIZE_ARR={arr_size} ITRS={dur} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
                                 check=True,shell=True,capture_output=True,timeout=1200)
         # print(f"output: {output}")
         output_list = output.stdout.decode('utf-8').strip().split("\n")
@@ -372,7 +372,7 @@ def read_output_pmu_high_power(filename,
 def read_output_pmu_low_power(filename,
                 sudo_password,papi_counter,arr_size, FREQ, dur) -> list[str]:
     try:
-        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_grt SIZE_ARR={arr_size} DUR={dur} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
+        output = subprocess.run([f"echo {sudo_password} | sudo -S LIBPFM_FORCE_PMU=adl_grt SIZE_ARR={arr_size} ITRS={dur} PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"],
                                 check=True,shell=True,capture_output=True,timeout=1200)
         # print(f"output: {output}")
         output_list = output.stdout.decode('utf-8').strip().split("\n")
