@@ -262,7 +262,7 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machi
         for i in range(itr):
             power_cap = row[machine]
             # if power cap is NC
-            if power_cap == "NC" or power_cap[0].isalpha():
+            if power_cap == "NC" or (type(power_cap) is str and power_cap[0].isalpha()):
                 data["Name"].append(row["Name"])
                 data["Energy(J)"].append(0)
                 data["Time(s)"].append(0)
