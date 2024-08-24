@@ -99,7 +99,9 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_passwo
                 df_old = df_old[df_old["Name"] != name]
                 files_run = files_run.remove(name)
             
-        data = df_old.to_dict()
+        data = {}
+        for keys in df_old.keys():
+            data[keys] = df_old[keys].tolist()
     else :
         df_old = None
 
@@ -256,7 +258,12 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machi
             if itr_count < itr :
                 df = df[df["Name"] != file]
                 files_run = files_run.remove(file)
-        data = df.to_dict()
+        data = {
+            "Name" : df["Name"].tolist(),
+            "PowerCap(W)" : df["PowerCap(W)"].to_list(),
+            "Energy(J)" : df["Energy(J)"].to_list(),
+            "Time(s)" : df["Time(s)"].to_list(),
+        }
     
     # for i, file in enumerate(list_of_files_to_run):
     for index, row in power_cap_df.iterrows():
