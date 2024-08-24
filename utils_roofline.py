@@ -178,8 +178,8 @@ machine_data_cache = {
 def get_time_duration(cache):
     data = {
         'L1D' : 70000,
-        'L2' : 1000,
-        'L3' : 100,
+        'L2' : 10000,
+        'L3' : 10000,
         'DRAM' : 1,
     }
     return data[cache]
@@ -227,9 +227,9 @@ def getcache_counter_mapping(machine,cache):
 def getcache_array_mapping(machine,cache):
     data = {
     "broadwell" :{
-        'L1D' : 768,
-        'L2' : 8192,
-        'L3' : 196608, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
+        'L1D' : 640,
+        'L2' : 6400,
+        'L3' : 64000, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
         'DRAM' : 314572800
     },
     "raptorlake" :{

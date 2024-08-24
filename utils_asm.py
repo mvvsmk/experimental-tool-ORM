@@ -113,6 +113,14 @@ flop_avx512_fma = """\tvfmadd213pd zmm{num}, zmm{num}, zmm{num}\n"""
 
 flop_avx2_fma = """\tvfmadd213pd ymm{num}, ymm{num}, ymm{num}\n"""
 
+while_loop ="""
+	mov rcx, {counter}
+.loop{num}:
+{flops}
+	loop .loop{num}
+
+{extra_flops}
+"""
 
 def make_sum_squares_asm_rocketlake(flops_per_element, output_file):
     template  = """
@@ -385,22 +393,43 @@ sumsqf:
 """
     num = flops_per_element
 
-    flops_per_group = num // 16
-    flops_adjusted = num % 16
+    flops_per_group = num // 8
+    flops_adjusted = num % 8
     print(flops_per_group, flops_adjusted)
-    array_tracks_flops = [flops_per_group] * 16
+    array_tracks_flops = [flops_per_group] * 8
     print(array_tracks_flops)
     for i in range(flops_adjusted):
         array_tracks_flops[i] += 1
     print(array_tracks_flops)
     flops_strings = []
     for number_flops in array_tracks_flops:
-        flop_sring = "\n"
-        for i in range(number_flops):
-            j = i % 15
-            flop_sring += flop.format(num=j)
-        flops_strings.append(flop_sring)
+        if number_flops // 16  < 5:
+            flop_sring = "\n"
+            for i in range(number_flops):
+                j = i % 16
+                flop_sring += flop.format(num=j)
+            flops_strings.append(flop_sring)
     # print(flops_strings)
+        else:
+            flops_strings = []
+        #now we will have loops repeating flops
+        
+            for count, number_flops in enumerate(array_tracks_flops):
+                flops = "\n"
+                flops_extra_outside = ""
+                #equally devide the flops loops of 15 + extra flops
+                flops_loops = number_flops // 16
+                flops_extra = number_flops % 16
+                print(f"flops in loop {flops_loops} and extra flops {flops_extra}")
+                for j in range(16):
+                    flops += flop.format(num=j)
+                for i in range(flops_extra):
+                    flops_extra_outside += flop.format(num=i)
+                flops_strings.append(while_loop.format(counter=flops_loops, flops=flops, extra_flops=flops_extra_outside, num=count))
+            
+	
+    # print(flops_strings)
+		
     final_file = template.format(flops1=flops_strings[0], 
                                 flops2=flops_strings[1], 
                                 flops3=flops_strings[2], 
@@ -524,22 +553,43 @@ sumsqf:
 """
     num = flops_per_element
 
-    flops_per_group = num // 16
-    flops_adjusted = num % 16
+    flops_per_group = num // 8
+    flops_adjusted = num % 8
     print(flops_per_group, flops_adjusted)
-    array_tracks_flops = [flops_per_group] * 16
+    array_tracks_flops = [flops_per_group] * 8
     print(array_tracks_flops)
     for i in range(flops_adjusted):
         array_tracks_flops[i] += 1
     print(array_tracks_flops)
     flops_strings = []
     for number_flops in array_tracks_flops:
-        flop_sring = "\n"
-        for i in range(number_flops):
-            j = i % 15
-            flop_sring += flop.format(num=j)
-        flops_strings.append(flop_sring)
+        if number_flops // 16  < 5:
+            flop_sring = "\n"
+            for i in range(number_flops):
+                j = i % 16
+                flop_sring += flop.format(num=j)
+            flops_strings.append(flop_sring)
     # print(flops_strings)
+        else:
+            flops_strings = []
+        #now we will have loops repeating flops
+        
+            for count, number_flops in enumerate(array_tracks_flops):
+                flops = "\n"
+                flops_extra_outside = ""
+                #equally devide the flops loops of 15 + extra flops
+                flops_loops = number_flops // 16
+                flops_extra = number_flops % 16
+                print(f"flops in loop {flops_loops} and extra flops {flops_extra}")
+                for j in range(16):
+                    flops += flop.format(num=j)
+                for i in range(flops_extra):
+                    flops_extra_outside += flop.format(num=i)
+                flops_strings.append(while_loop.format(counter=flops_loops, flops=flops, extra_flops=flops_extra_outside, num=count))
+            
+	
+    # print(flops_strings)
+		
     final_file = template.format(flops1=flops_strings[0], 
                                 flops2=flops_strings[1], 
                                 flops3=flops_strings[2], 
@@ -551,3 +601,9 @@ sumsqf:
     # write final file to sumsq.asm
     with open(output_file, "w") as f:
         f.write(final_file)
+        
+if __name__ == "__main__":
+	# make_sum_squares_asm_rocketlake(128, "sumsq_rocketlake.asm")
+	make_sum_squares_asm_broadwell(9999, "sumsq_broadwell.asm")
+	# make_sum_squares_asm_broadwell(9, "sumsq_broadwell.asm")
+	# make_sum_squares_asm_raptorlake(128, "sumsq_raptorlake.asm")
