@@ -197,7 +197,11 @@ def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_
             if itr_count < itr :
                 df = df[df["Name"] != file]
                 files_run = files_run.remove(file)
-        data = df.to_dict()
+        data = {
+            "Name" : df["Name"].tolist(),
+            "Energy(J)" : df["Energy(J)"].to_list(),
+            "Time(s)" : df["Time(s)"].to_list(),
+        }
     
     for i, file in enumerate(list_of_files_to_run):
         if file in files_run :
