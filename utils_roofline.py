@@ -204,9 +204,9 @@ def min_power_cap_W(machine):
 def getcache_counter_mapping(machine,cache):
     data = {
     "broadwell" :{
-        'L1' : 'PAPI_LST_INS',
-        'L2' : 'PAPI_L1_DCM',
-        'L3' : 'PAPI_L2_DCM',
+        'L1D' : 'perf::PERF_COUNT_HW_CACHE_L1D:ACCESS',
+        'L2' : 'perf::PERF_COUNT_HW_CACHE_L1D:MISS',
+        'L3' : 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS', # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
         'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
     },
     "raptorlake" :{
@@ -227,10 +227,10 @@ def getcache_counter_mapping(machine,cache):
 def getcache_array_mapping(machine,cache):
     data = {
     "broadwell" :{
-        'L1' : 'PAPI_LST_INS',
-        'L2' : 'PAPI_L1_DCM',
-        'L3' : 'PAPI_L2_DCM',
-        'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
+        'L1D' : 768,
+        'L2' : 8192,
+        'L3' : 196608, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
+        'DRAM' : 314572800
     },
     "raptorlake" :{
         'L1D' : 768,
