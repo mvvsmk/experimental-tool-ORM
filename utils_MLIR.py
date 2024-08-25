@@ -110,7 +110,7 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_passwo
     for file in os.listdir(build_dir):
         # if file.endswith("_inst") and "alexnet" in file:
         if file.endswith("_inst") :
-            if df_old.size > 0 :
+            if df_old != None:
                 already_run = df_old["Name"].unique()
                 already_run = [os.path.basename(x) for x in already_run]
                 # print(f"already run {already_run}")
