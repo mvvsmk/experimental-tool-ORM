@@ -44,7 +44,7 @@ def set_governer(governer,sudo_password) -> None:
     """
     try:
         # subprocess.call("sudo sh -c 'echo userspace > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor'",stdin=password.encode() ,shell=True).communicate()
-        subprocess.run([f"sudo -S cpupower frequency-set -g {governer}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([f"sudo -S LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-set -g {governer}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
         print("Governer set to userspace")
     except subprocess.CalledProcessError as e:
         print(f"Error setting governer to {governer}: {e}")
@@ -117,7 +117,7 @@ def get_available_frequencies_cpupower() -> list[int]:
     Get the available frequencies
     """
     try:
-        output = subprocess.run("cpupower frequency-info | grep \"available frequency steps\"", shell=True,capture_output=True,check=True)
+        output = subprocess.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-info | grep \"available frequency steps\"", shell=True,capture_output=True,check=True)
         frequencies = output.stdout.decode('utf-8')
         frequencies = frequencies.split(":")[1].strip().replace(" ","").split(",")
         #if 2 entries in frequencies is same then remove one of them one of them might be a trubo frequency
@@ -160,8 +160,8 @@ def set_frequency(sudo_password,frequency) -> None:
     """
     try:
         # subprocess.call(f"sudo sh -c 'echo {frequency} > /sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed'",shell=True)
-        subprocess.run([f"sudo -S cpupower frequency-set -d {frequency}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
-        subprocess.run([f"sudo -S cpupower frequency-set -u {frequency}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([f"sudo -S LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-set -d {frequency}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([f"sudo -S LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-set -u {frequency}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
         print(f"Frequency set to {frequency}")
     except subprocess.CalledProcessError as e:
         print(f"Error setting frequency to {frequency}: {e}")
@@ -173,8 +173,8 @@ def reset_frequency(sudo_password) -> None:
     max = all[-1]
     min = all[0]
     try:
-        subprocess.run([f"sudo -S cpupower frequency-set -d {min}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
-        subprocess.run([f"sudo -S cpupower frequency-set -u {max}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([f"sudo -S LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-set -d {min}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([f"sudo -S LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-set -u {max}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
         print(f"Frequency reset to default")
     except subprocess.CalledProcessError as e:
         print(f"Error resetting frequency: {e}")

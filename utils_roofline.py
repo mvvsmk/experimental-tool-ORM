@@ -10,7 +10,7 @@ import pandas as pd
 from utils_freq import get_available_frequencies,set_frequency,set_governer
 from utils_exp_params import check_exp_setup
 from utils_state import load_state, save_state
-from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell
+from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell, make_sum_squares_asm_zen3
 from utils_roofline_plot import plot_muliple_roofline
 import psutil
 
@@ -221,6 +221,12 @@ def getcache_counter_mapping(machine,cache):
         'L3' : 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS', # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
         'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
     },
+    "zen3" :{
+        'L1D' : 'perf::PERF_COUNT_HW_CACHE_L1D:ACCESS',
+        'L2' : 'perf::PERF_COUNT_HW_CACHE_L1D:MISS',
+        'L3' : 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS', # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
+        'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
+    },
     }
     return data[machine][cache]
 
@@ -239,6 +245,12 @@ def getcache_array_mapping(machine,cache):
         'DRAM' : 314572800
     },
     "rocketlake" :{
+        'L1D' : 5120,
+        'L2' : 15872,
+        'L3' : 131072, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
+        'DRAM' : 314572800
+    },
+    "zen3" :{
         'L1D' : 5120,
         'L2' : 15872,
         'L3' : 131072, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
@@ -300,6 +312,8 @@ def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> No
             make_sum_squares_asm_rocketlake(flops_per_element=MAD_PER_ELEMENT, output_file=asm_file)
         elif machine == "broadwell":
             make_sum_squares_asm_broadwell(flops_per_element=MAD_PER_ELEMENT, output_file=asm_file)
+        elif machine == "zen3":
+            make_sum_squares_asm_zen3(flops_per_element=MAD_PER_ELEMENT, output_file=asm_file)
         # get a list of all the items present in the source directory
         old_items = os.listdir(source_dir)
         filename=f"main_{MAD_PER_ELEMENT}"
@@ -410,7 +424,7 @@ def parse_args() -> argparse.Namespace:
 
     #check if machine in raptorlake, rocketlake or broadwell
     args = parser.parse_args()
-    if args.machine not in ["raptorlake", "rocketlake", "broadwell", "skylake"]:
+    if args.machine not in ["raptorlake", "rocketlake", "broadwell", "skylake", "zen3"]:
         print(f"Error: {args.machine} is not a valid machine.")
         print(f"if you are using it with a new machine then please do enter the unit mulitplier for energy in the script")
         exit(1)
