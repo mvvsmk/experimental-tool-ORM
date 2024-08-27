@@ -51,7 +51,7 @@ def parse_args():
     parser.add_argument("--password", type=str, required=True, help="Password for sudo")
     parser.add_argument("--inst_type", type=str, required=True, help="oracle, oracle+powercap, powercap, papi")
     parser.add_argument("--benchmarks", type=str, required=True, help="MLIR, Polybench")
-    parser.add_argument("--itr", type=int, default=5, help="Number of iterations to run the experiments")
+    parser.add_argument("--itr", type=int, default=1, help="Number of iterations to run the experiments")
     parser.add_argument("--freq_change", type=bool, default=False, help="Change the frequency")
     parser.add_argument('-e','--exp_conditions',
                         action='append',
