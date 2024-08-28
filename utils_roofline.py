@@ -291,14 +291,6 @@ def get_constant_power(machine : str,sudo_pass :str, duration :str) -> float:
     return data
 
 
-def get_energy_multiplication_factor(machine : str) -> float:
-    multiplier = {
-        "raptorlake" : (1/2)**14,
-        "rocketlake" : (1/2)**14,
-        "skylake" : (1/2)**14,
-        "broadwell" : (1/2)**14
-    }
-    return multiplier[machine]
 
 def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> None:
     try:
