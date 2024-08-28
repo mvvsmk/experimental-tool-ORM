@@ -763,8 +763,206 @@ sumsqf:
     with open(output_file, "w") as f:
         f.write(final_file)
         
+# if __name__ == "__main__":
+# 	# make_sum_squares_asm_rocketlake(128, "sumsq_rocketlake.asm")
+# 	make_sum_squares_asm_broadwell(9999, "sumsq_broadwell.asm")
+# 	# make_sum_squares_asm_broadwell(9, "sumsq_broadwell.asm")
+# 	# make_sum_squares_asm_raptorlake(128, "sumsq_raptorlake.asm")
+ 
+def make_sum_squares_ams_only_flops(machine,output_file):
+    machine_flop_map ={
+        "broadwell" : """\tvfmadd213pd ymm{num}, ymm{num}, ymm{num}\n""",
+        "rocketlake" : """\tvfmadd213pd zmm{num}, zmm{num}, zmm{num}\n""",
+        "raptorlake" : """\tvfmadd213pd ymm{num}, ymm{num}, ymm{num}\n""",
+        "zen3" : """\tvfmadd213pd ymm{num}, ymm{num}, ymm{num}\n""",
+    }
+    
+    machine_reg_map = {
+        "broadwell" : 16,
+        "rocketlake" : 32,
+        "raptorlake" : 16,
+        "zen3" : 16,
+    }
+    
+    template1 = """
+section .text align=64
+global sumsq
+global sumsqf
+
+sumsq:
+    vzeroall
+    add rdi, 512
+    mov rax, 1024
+    sub rsi, 128
+    
+    jb .restore
+    align 64
+    sub rdi, rax
+.process_by_32:
+    {flops}
+
+    add rdi, rax
+    sub rsi, 128
+    jae .process_by_32
+.restore:
+    add rsi, 128
+    jz .finish
+    int 3
+.finish:
+    vzeroupper
+    ret
+
+sumsqf:
+    sub rdi, -128
+    mov eax, 256
+    vzeroall
+    sub rsi, 64
+    
+    jb .restore
+    align 32
+.process_by_64:
+    vmovaps ymm0, [rdi - 128]
+    vmovaps ymm1, [rdi - 96]
+    vmovaps ymm2, [rdi - 64]
+    vmovaps ymm3, [rdi - 32]
+    vmovaps ymm4, [rdi]
+    vmovaps ymm5, [rdi + 32]
+    vmovaps ymm6, [rdi + 64]
+    vmovaps ymm7, [rdi + 96]
+
+
+; %rep 1
+    vmulps ymm0, ymm0, ymm0
+    vaddps ymm8, ymm8, ymm0
+    vmulps ymm1, ymm1, ymm1
+    vaddps ymm9, ymm9, ymm1
+    vmulps ymm2, ymm2, ymm2
+    vaddps ymm10, ymm10, ymm2
+    vmulps ymm3, ymm3, ymm3
+    vaddps ymm11, ymm11, ymm3
+    vmulps ymm4, ymm4, ymm4
+    vaddps ymm12, ymm12, ymm4
+    vmulps ymm5, ymm5, ymm5
+    vaddps ymm13, ymm13, ymm5
+    vmulps ymm6, ymm6, ymm6
+    vaddps ymm14, ymm14, ymm6
+    vmulps ymm7, ymm7, ymm7
+    vaddps ymm15, ymm15, ymm7
+    add rdi, rax
+    sub rsi, 64
+    jae .process_by_64
+.restore:
+    add rsi, 64
+    jz .finish
+    int 3
+.finish:
+    vzeroupper
+    ret
+"""
+
+
+    template2 = """
+section .text align=64
+global sumsq
+global sumsqf
+
+sumsq:
+	sub rdi, -256
+	vzeroall
+	mov rax, 512
+	sub rsi, 64
+	
+	jb .restore
+	align 32
+.process_by_32:
+    {flops}
+
+	add rdi, rax
+	sub rsi, 64
+	jae .process_by_32
+.restore:
+	add rsi, 64
+	jz .finish
+	int 3
+.finish:
+	vzeroupper
+	ret
+
+sumsqf:
+	sub rdi, -128
+	mov eax, 256
+	vzeroall
+	sub rsi, 64
+	
+	jb .restore
+	align 32
+.process_by_64:
+	vmovaps ymm0, [rdi - 128]
+	vmovaps ymm1, [rdi - 96]
+	vmovaps ymm2, [rdi - 64]
+	vmovaps ymm3, [rdi - 32]
+	vmovaps ymm4, [rdi]
+	vmovaps ymm5, [rdi + 32]
+	vmovaps ymm6, [rdi + 64]
+	vmovaps ymm7, [rdi + 96]
+
+
+%rep 1
+	vmulps ymm0, ymm0, ymm0
+	vaddps ymm8, ymm8, ymm0
+	vmulps ymm1, ymm1, ymm1
+	vaddps ymm9, ymm9, ymm1
+	vmulps ymm2, ymm2, ymm2
+	vaddps ymm10, ymm10, ymm2
+	vmulps ymm3, ymm3, ymm3
+	vaddps ymm11, ymm11, ymm3
+	vmulps ymm4, ymm4, ymm4
+	vaddps ymm12, ymm12, ymm4
+	vmulps ymm5, ymm5, ymm5
+	vaddps ymm13, ymm13, ymm5
+	vmulps ymm6, ymm6, ymm6
+	vaddps ymm14, ymm14, ymm6
+	vmulps ymm7, ymm7, ymm7
+	vaddps ymm15, ymm15, ymm7
+%endrep
+	add rdi, rax
+	sub rsi, 64
+	jae .process_by_64
+.restore:
+	add rsi, 64
+	jz .finish
+	int 3
+.finish:
+	vzeroupper
+	ret
+"""
+    machine_template_map = {
+        "broadwell" : template2,
+        "rocketlake" : template1,
+        "raptorlake" : template2,
+        "zen3" : template2,
+    }
+
+    num = machine_reg_map[machine]
+    flop = machine_flop_map[machine]
+    template = machine_template_map[machine]
+    
+    # create a while loop with respective flops with the using all resgisters in num
+    flops = "\n"
+    for i in range(num):
+        flops += flop.format(num=i)
+        
+    final_file = template.format(flops=flops)
+    # print(final_file)
+    # exit()
+    # write final file to sumsq.asm
+    with open(output_file, "w") as f:
+        f.write(final_file)
+        
+        
 if __name__ == "__main__":
-	# make_sum_squares_asm_rocketlake(128, "sumsq_rocketlake.asm")
-	make_sum_squares_asm_broadwell(9999, "sumsq_broadwell.asm")
-	# make_sum_squares_asm_broadwell(9, "sumsq_broadwell.asm")
-	# make_sum_squares_asm_raptorlake(128, "sumsq_raptorlake.asm")
+    make_sum_squares_ams_only_flops("broadwell", "sumsq_broadwell.asm")
+    # make_sum_squares_ams_only_flops("rocketlake", "sumsq_rocketlake.asm")
+    # make_sum_squares_ams_only_flops("raptorlake", "sumsq_raptorlake.asm")
+    # make_sum_squares_ams_only_flops("zen3", "sumsq_zen3.asm")
+    # make_sum_squares_asm_broadwell(0, "sumsq_broadwell.asm")

@@ -11,6 +11,7 @@ from utils_freq import get_available_frequencies,set_frequency,set_governer
 from utils_exp_params import check_exp_setup
 from utils_state import load_state, save_state
 from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell, make_sum_squares_asm_zen3
+from utils_asm import make_sum_squares_ams_only_flops
 from utils_roofline_plot import plot_muliple_roofline
 import psutil
 
@@ -225,7 +226,7 @@ def getcache_counter_mapping(machine,cache):
         'L1D' : 'perf::PERF_COUNT_HW_CACHE_L1D:ACCESS',
         'L2' : 'perf::PERF_COUNT_HW_CACHE_L1D:MISS',
         'L3' : 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS', # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
-        'DRAM' : "perf::PERF_COUNT_HW_CACHE_LL:MISS"
+        'DRAM' : "amd64_fam19h_zen3_l3::UNC_L3_MISSES:cpu=0"
     },
     }
     return data[machine][cache]
@@ -254,7 +255,7 @@ def getcache_array_mapping(machine,cache):
         'L1D' : 5120,
         'L2' : 15872,
         'L3' : 131072, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
-        'DRAM' : 314572800
+        'DRAM' : 209715200
     },
     }
     return data[machine][cache]
@@ -337,6 +338,36 @@ def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> No
     except subprocess.CalledProcessError as e:
         print(f"Error: Benchmarks compilation failed with return code {e.returncode}")
 
+def make_benchmarks_only_fma(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> None:
+    try:
+        print("<------------------------------------------------------------------------>")
+        # store the current working directory
+        cwd = os.getcwd()
+        os.chdir(source_dir)
+        asm_file = os.path.join(source_dir,"sumsq.asm")
+        make_sum_squares_ams_only_flops(machine=machine, output_file=asm_file)
+        # get a list of all the items present in the source directory
+        old_items = os.listdir(source_dir)
+        filename=f"main_{MAD_PER_ELEMENT}"
+        output = subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}"])
+        # after the make command runs copy the binary with the name filename to build_dir
+        shutil.copy(filename,build_dir)
+        output = subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}", "clean"])
+        new_items = os.listdir(source_dir)
+        new_files = [item for item in new_items if item not in old_items]
+        print(f"new_files left after make clean: {new_files}")
+        for file in new_files:
+            print(f"Deleting {file}")
+            os.remove(file)
+        # change the working directory back to the original working directory
+        os.chdir(cwd)
+        # rename the file to the correct name
+        os.rename(os.path.join(build_dir,filename),os.path.join(build_dir,f"main_inf"))
+        print("=============================================================================")
+        print(f"FMA only benchmark made {filename} and moved to build directory : {build_dir}")
+        print("<------------------------------------------------------------------------>")
+    except subprocess.CalledProcessError as e:
+        print(f"Error: FMA only Benchmarks compilation failed with return code {e.returncode}")
 
 def read_output(filename,
                 sudo_password,papi_counter,FREQ,arr_size, dur) -> list[str]:
@@ -454,6 +485,16 @@ def get_energy_roofline_time_benchmarks(sudo_password,
 
     output_file = os.path.join(output_dir,f"a_roofline_model_for_energy_benchmarks_{suffix}.csv")
     
+    machine_to_reg_map = {
+        "raptorlake" : 16,
+        "rocketlake" : 32,
+        "brodwell" : 16,
+        "zen3" : 16,
+    }
+    #make only flop benchmark
+    make_benchmarks_only_fma(build_dir,source_dir,MAD_PER_ELEMENT=machine_to_reg_map[machine],machine=machine)    
+    
+    
     MAD_PER_ELEMENT_values = np.logspace(0,5,25,base=10).astype(int)
     # MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[1,2,3,4,5,6,7,8,9])
     # MAD_PER_ELEMENT_values = [1, 10 ,100, 1000, 10000]
@@ -461,7 +502,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     print(f"MAD_PER_ELEMENT_values: {MAD_PER_ELEMENT_values}")
     print(f"Length of MAD_PER_ELEMENT_values: {len(MAD_PER_ELEMENT_values)}")
     # exit()        
-
+    
     print(f"MAD_PER_ELEMENT_values: {MAD_PER_ELEMENT_values}")
     # make benchmarks
     for MAD_PER_ELEMENT in MAD_PER_ELEMENT_values:
@@ -490,6 +531,12 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     # caches = ['L1' , 'L2' , 'L3' ,'DRAM']
     caches = ['L1D' , 'L2' , 'L3', 'DRAM']
     # caches = ['L3' ]
+    
+    # testing purposes
+    if machine == "zen3":
+        caches = ['DRAM']
+        
+    
     print(f"build_dir: {build_dir}")
     files = os.listdir(build_dir)
     print(f"files: {files}")
@@ -516,6 +563,9 @@ def get_energy_roofline_time_benchmarks(sudo_password,
             }
         output_file = os.path.join(output_dir,f"a_roofline_model_for_energy_benchmarks_{suffix}_{cache}.csv")
         for file in files:
+            is_Fma_only = False
+            if "inf" in file:
+                is_Fma_only = True
             papi_counter = getcache_counter_mapping(machine=machine,cache=cache)
             array_len = getcache_array_mapping(machine=machine,cache=cache)
             array_sizes_to_run = [array_len]
@@ -599,6 +649,9 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                     total_flops = float(output_list[-2])
                     total_missed_bytes = float(output_list[-1])
                     const_power_data = constant_power
+                    if is_Fma_only:
+                        total_missed_bytes = 0
+                        OI = total_flops / total_missed_bytes
                     
                     data2["Frequency(kHz)"].append(freq)
                     data2["Execution Time(s)"].append(execution_time)

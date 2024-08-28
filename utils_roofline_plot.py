@@ -130,7 +130,65 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
         "Time balance [OI]" : [],
         "Energy balance [OI]" : [],
         "Constant Power [W]" : [],
+        "Constant Energy Per Flop [J/ops]" : [],
+        "Constant Flop Energy Efficiency" : [],
+        "New Balance Energy" : [],
     }
+
+    for i, freq in enumerate(frequencies):
+        data[i][1]["Time Per Flop [s/ops]"] = data[i][1]["Execution Time(s)"] / data[i][1]["total_flops"]
+        data[i][1]["Time Per Byte [s/ops]"] = data[i][1]["Execution Time(s)"] / data[i][1]["total_missed_bytes"]
+        data[i][1]["Energy Per Flop [J/ops]"] = data[i][1]["Energy(J)"] / data[i][1]["total_flops"]
+        data[i][1]["Energy Per Byte [J/ops]"] = data[i][1]["Energy(J)"] / data[i][1]["total_missed_bytes"]
+        total_flops = data[i][1]["total_flops"]
+        time_per_flop = data[i][1]["Time Per Flop [s/ops]"].iloc[-1]
+        time_per_byte = data[i][1]["Time Per Byte [s/ops]"].iloc[0]
+        energy_per_flop = data[i][1]["Energy Per Flop [J/ops]"].iloc[-1]
+        energy_per_byte = data[i][1]["Energy Per Byte [J/ops]"].iloc[0]
+        power_per_flop = energy_per_flop / time_per_flop
+        power_per_byte = energy_per_byte / time_per_byte
+        constant_power = data[i][1]["Constant Power (W)"].median()
+        constant_energy_per_flop = constant_power * time_per_flop
+        constant_flop_energy_efficiency = energy_per_flop / (energy_per_flop + constant_energy_per_flop)
+        balance_time = time_per_byte / time_per_flop
+        balance_energy = energy_per_byte / time_per_byte
+        # print every thing
+        # print(f"Frequency: {freq}")
+        # print(f"Time per flop: {time_per_flop}")
+        # print(f"Time per byte: {time_per_byte}")
+        # print(f"Energy per flop: {energy_per_flop}")
+        # print(f"Energy per byte: {energy_per_byte}")
+        # print(f"Power per flop: {power_per_flop}")
+        # print(f"Power per byte: {power_per_byte}")
+        # print(f"Constant power: {constant_power}")
+        # print(f"Constant energy per flop: {constant_energy_per_flop}")
+        # print(f"Constant flop energy efficiency: {constant_flop_energy_efficiency}")
+        # print(f"Balance time: {balance_time}")
+        # print(f"Balance energy: {balance_energy}")
+        # print("\n\n\n")
+        # exit()
+        for j, row in data[i][1].iterrows():
+            print(row["Power(W)"])
+            new_balance_energy = (constant_flop_energy_efficiency * balance_energy) + ((1 - constant_flop_energy_efficiency) * max(0,(balance_time - row["OI"])))
+            row["Power(W)"] = (power_per_flop / constant_flop_energy_efficiency) * ((min(row["OI"], balance_time) / balance_time) + new_balance_energy / max(row["OI"], balance_time))
+            # print(power_per_flop / constant_flop_energy_efficiency)
+            # print(new_balance_energy)
+            # print((min(row["OI"], balance_time) / balance_time) + new_balance_energy / min(row["OI"], balance_time))
+            data[i][1].loc[j] = row
+            print(row["Power(W)"])
+            # exit()
+        print(data[i][1]["Power(W)"])
+        # exit()
+        data_new["Time Per Flop [s/ops]"].append(time_per_flop)
+        data_new["Time Per Byte [s/ops]"].append(time_per_byte)
+        data_new["Energy Per Flop [J/ops]"].append(energy_per_flop)
+        data_new["Energy Per Byte [J/ops]"].append(energy_per_byte)
+        data_new["Power Per Flop [W/ops]"].append(power_per_flop)
+        data_new["Power Per Byte [W/ops]"].append(power_per_byte)
+        data_new["Time balance [OI]"].append(time_per_byte / time_per_flop)
+        data_new["Energy balance [OI]"].append(energy_per_byte / energy_per_flop)
+        data_new["Constant Power [W]"].append(constant_power)
+
 
     for i, freq in enumerate(frequencies):
         # print(f'{data["df"][i]["Execution Time(s)"] / data["df"][i]["total_flops"]}')
@@ -149,7 +207,7 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
         energy_per_byte = data[i][1]["Energy Per Byte [J/ops]"].iloc[0]
         power_per_flop = energy_per_flop / time_per_flop
         power_per_byte = energy_per_byte / time_per_byte
-        constant_power = data[i][1]["Constant Power (W)"].mean()
+        constant_power = data[i][1]["Constant Power (W)"].median()
         
         data_new["Time Per Flop [s/ops]"].append(time_per_flop)
         data_new["Time Per Byte [s/ops]"].append(time_per_byte)

@@ -79,6 +79,8 @@ def get_energy_multiplication_factor(machine : str) -> float:
         "raptorlake" : (1/2)**14,
         "rocketlake" : (1/2)**14,
         "skylake" : (1/2)**14,
-        "broadwell" : (1/2)**14
+        "broadwell" : (1/2)**14,
+        "zen3" : 0.000015259,
+        
     }
     return multiplier[machine]

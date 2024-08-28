@@ -226,21 +226,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         os.makedirs(build_dir_papi, exist_ok=True)
         default_verbose_polybench = os.path.join(kernel_dir, "./PolyBenchC-4.2.1")
         
-        if machine != "raptorlake":
-            configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, machine=machine)
-            
-            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
-                                                                    build_dir=build_dir_papi, 
-                                                                    dataset=dataset, 
-                                                                    data_type=data_type)
-            
-            run_kernels_papi(build_dir=build_dir_papi_polybench, 
-                             output_dir=papi_output_dir, 
-                             num_iterations=itr, 
-                             suffix=suffix, sleep=10, 
-                             password=password, 
-                             high_performance_cores=False)
-        else:
+        if machine == "raptorlake":
             configure_polybench(kernel_dir=kernel_dir, 
                                 src_dir=default_verbose_polybench, 
                                 machine=machine, 
@@ -261,6 +247,11 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
             configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, 
                                 machine=machine, file="papi_counters_raptorlake_mem.list")
             
+            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
+                                                        build_dir=build_dir_papi, 
+                                                        dataset=dataset, 
+                                                        data_type=data_type)
+            
             perf = run_kernels_papi(build_dir=build_dir_papi_polybench, 
                                     output_dir=papi_output_dir, 
                                     num_iterations=itr, 
@@ -277,6 +268,64 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
             merged_output_file = os.path.join(papi_output_dir, f"kernel_data_PolyBenchC-4.2.1_{suffix}_merged.csv")
             merged_df.to_csv(merged_output_file, index=False)
             print(f"Saved merged data to {merged_output_file}")
+        
+        elif machine == "zen3":
+            configure_polybench(kernel_dir=kernel_dir, 
+                                src_dir=default_verbose_polybench, 
+                                machine=machine, 
+                                file="papi_counters_raptorlake_flop.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
+                                                                    build_dir=build_dir_papi, 
+                                                                    dataset=dataset, 
+                                                                    data_type=data_type)
+            
+            glc = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_glc", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=True)
+            
+            configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, 
+                                machine=machine, file="papi_counters_raptorlake_mem.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
+                                                        build_dir=build_dir_papi, 
+                                                        dataset=dataset, 
+                                                        data_type=data_type)
+            
+            perf = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_perf", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=False)
+            
+            #{"dataframe":df,"output_file":csv_name}
+            glc_df = glc["dataframe"]
+            glc_output_file = glc["output_file"]
+            perf_df = perf["dataframe"]
+            perf_output_file = perf["output_file"]
+            merged_df = pd.merge(glc_df, perf_df, on="Name")
+            merged_output_file = os.path.join(papi_output_dir, f"kernel_data_PolyBenchC-4.2.1_{suffix}_merged.csv")
+            merged_df.to_csv(merged_output_file, index=False)
+            print(f"Saved merged data to {merged_output_file}")
+            
+        else:
+            configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, machine=machine)
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
+                                                                    build_dir=build_dir_papi, 
+                                                                    dataset=dataset, 
+                                                                    data_type=data_type)
+            
+            run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                             output_dir=papi_output_dir, 
+                             num_iterations=itr, 
+                             suffix=suffix, sleep=10, 
+                             password=password, 
+                             high_performance_cores=False)
     
     if oracle and benchmark == "MLIR":
         print("Capturing oracle data")

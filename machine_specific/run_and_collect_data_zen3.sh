@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-ps aux | grep .vscode-server | awk '{print $2}' | xargs kill
+# ps aux | grep .vscode-server | awk '{print $2}' | xargs kill
 
 OUTPUT_DIR="energy_results"
 DATE=$(date +'%d%b')
@@ -8,11 +8,11 @@ MACHINE="zen3"
 PASSWORD="nilesh21"
 
 # List of types
-strings=("mod_fma_300")
+strings=("fma_avx_300")
 
-iterations=(10)
+iterations=(1)
 
-sleep_times=(10 20)
+sleep_times=(10)
 
 # Loop through each string
 for str in "${strings[@]}"; do
@@ -21,7 +21,7 @@ for str in "${strings[@]}"; do
   for ITRS in "${iterations[@]}"; do
     for SLEEP_TIME in "${sleep_times[@]}"; do
       # Define the folder name with the iteration and sleep time suffix
-      FOLDER_NAME="${OUTPUT_DIR}/${DATE}/${MACHINE}_multiple_roofline/${TYPE}_itr${ITRS}_sleep${SLEEP_TIME}_117"
+      FOLDER_NAME="${OUTPUT_DIR}/${DATE}/${MACHINE}_multiple_roofline/${TYPE}_itr${ITRS}_sleep${SLEEP_TIME}_157"
       
       # Remove the folder if it exists
       echo $PASSWORD | sudo -S rm -rf ${FOLDER_NAME}
