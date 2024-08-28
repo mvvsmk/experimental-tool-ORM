@@ -13,6 +13,7 @@ from utils_state import load_state, save_state
 from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell, make_sum_squares_asm_zen3
 from utils_asm import make_sum_squares_ams_only_flops
 from utils_roofline_plot import plot_muliple_roofline
+from utils_energy import get_energy_multiplication_factor
 import psutil
 
 base_array_len_a_roofline_energy = 64
