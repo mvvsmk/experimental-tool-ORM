@@ -465,31 +465,36 @@ sumsq:
 	vmovapd ymm1, [rdi - 224]
 	vmovapd ymm2, [rdi - 192]
 	vmovapd [rdi - 256], ymm0
+	vmovapd [rdi - 224], ymm1
     {flops1}
 	
     vmovapd ymm3, [rdi - 160]
 	vmovapd ymm4, [rdi - 128]
 	vmovapd ymm5, [rdi - 96]
-	vmovapd [rdi - 224], ymm1
+	vmovapd [rdi - 192], ymm2
+	vmovapd [rdi - 160], ymm3
     {flops2}
 	
 	vmovapd ymm6, [rdi - 64]
     vmovapd ymm7, [rdi - 32]
 	vmovapd ymm8, [rdi]
-	vmovapd [rdi - 192], ymm2
+	vmovapd [rdi - 128], ymm4
+	vmovapd [rdi - 96], ymm5
     {flops3}
     
 	vmovapd ymm9, [rdi + 32]
 	vmovapd ymm10, [rdi + 64]
 	vmovapd ymm11, [rdi + 96]
-	vmovapd [rdi - 160], ymm3
+	vmovapd [rdi - 64], ymm6
+	vmovapd [rdi - 32], ymm7
     {flops4}
     
     
 	vmovapd ymm12, [rdi + 160]
 	vmovapd ymm4, [rdi + 128]
 	vmovapd ymm6, [rdi + 192]
-	vmovapd [rdi - 128], ymm4
+	vmovapd [rdi], ymm8
+	vmovapd [rdi + 32], ymm9
     {flops5}
 
 	add rdi, rax
@@ -626,33 +631,37 @@ sumsq:
 	vmovapd ymm1, [rdi - 224]
 	vmovapd ymm2, [rdi - 192]
 	vmovapd [rdi - 256], ymm0
+	vmovapd [rdi - 224], ymm1
     {flops1}
 	
     vmovapd ymm3, [rdi - 160]
 	vmovapd ymm4, [rdi - 128]
 	vmovapd ymm5, [rdi - 96]
-	vmovapd [rdi - 224], ymm1
+	vmovapd [rdi - 192], ymm2
+	vmovapd [rdi - 160], ymm3
     {flops2}
 	
 	vmovapd ymm6, [rdi - 64]
     vmovapd ymm7, [rdi - 32]
 	vmovapd ymm8, [rdi]
-	vmovapd [rdi - 192], ymm2
+	vmovapd [rdi - 128], ymm4
+	vmovapd [rdi - 96], ymm5
     {flops3}
     
 	vmovapd ymm9, [rdi + 32]
 	vmovapd ymm10, [rdi + 64]
 	vmovapd ymm11, [rdi + 96]
-	vmovapd [rdi - 160], ymm3
+	vmovapd [rdi - 64], ymm6
+	vmovapd [rdi - 32], ymm7
     {flops4}
     
     
 	vmovapd ymm12, [rdi + 160]
 	vmovapd ymm4, [rdi + 128]
 	vmovapd ymm6, [rdi + 192]
-	vmovapd [rdi - 128], ymm4
+	vmovapd [rdi], ymm8
+	vmovapd [rdi + 32], ymm9
     {flops5}
-
 	add rdi, rax
 	sub rsi, 64
 	jae .process_by_32
