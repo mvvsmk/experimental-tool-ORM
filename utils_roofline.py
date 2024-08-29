@@ -644,7 +644,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                     const_power_data = constant_power
                     if is_Fma_only:
                         total_missed_bytes = 0
-                        OI = total_flops / total_missed_bytes
+                        OI = float('inf')
                     
                     data2["Frequency(kHz)"].append(freq)
                     data2["Execution Time(s)"].append(execution_time)

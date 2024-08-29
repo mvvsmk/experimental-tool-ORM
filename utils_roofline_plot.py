@@ -188,36 +188,40 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
         data_new["Time balance [OI]"].append(time_per_byte / time_per_flop)
         data_new["Energy balance [OI]"].append(energy_per_byte / energy_per_flop)
         data_new["Constant Power [W]"].append(constant_power)
+        data_new["Constant Energy Per Flop [J/ops]"].append(constant_energy_per_flop)
+        data_new["Constant Flop Energy Efficiency"].append(constant_flop_energy_efficiency)
+        data_new["New Balance Energy"].append(new_balance_energy)
 
 
-    for i, freq in enumerate(frequencies):
-        # print(f'{data["df"][i]["Execution Time(s)"] / data["df"][i]["total_flops"]}')
-        data_new["Frequency(kHz)"].append(data[i][0])
-        data[i][1]["Time Per Flop [s/ops]"] = data[i][1]["Execution Time(s)"] / data[i][1]["total_flops"]
-        data[i][1]["Time Per Byte [s/ops]"] = data[i][1]["Execution Time(s)"] / data[i][1]["total_missed_bytes"]
-        data[i][1]["Energy Per Flop [J/ops]"] = data[i][1]["Energy(J)"] / data[i][1]["total_flops"]
-        data[i][1]["Energy Per Byte [J/ops]"] = data[i][1]["Energy(J)"] / data[i][1]["total_missed_bytes"]
+    # for i, freq in enumerate(frequencies):
+    #     # print(f'{data["df"][i]["Execution Time(s)"] / data["df"][i]["total_flops"]}')
+    #     data_new["Frequency(kHz)"].append(data[i][0])
+    #     data[i][1]["Time Per Flop [s/ops]"] = data[i][1]["Execution Time(s)"] / data[i][1]["total_flops"]
+    #     data[i][1]["Time Per Byte [s/ops]"] = data[i][1]["Execution Time(s)"] / data[i][1]["total_missed_bytes"]
+    #     data[i][1]["Energy Per Flop [J/ops]"] = data[i][1]["Energy(J)"] / data[i][1]["total_flops"]
+    #     data[i][1]["Energy Per Byte [J/ops]"] = data[i][1]["Energy(J)"] / data[i][1]["total_missed_bytes"]
 
-        data[i][1].sort_values(by='OI')
-        # print(data[i][1])
-        # exit()
-        time_per_flop = data[i][1]["Time Per Flop [s/ops]"].iloc[-1]
-        time_per_byte = data[i][1]["Time Per Byte [s/ops]"].iloc[0]
-        energy_per_flop = data[i][1]["Energy Per Flop [J/ops]"].iloc[-1]
-        energy_per_byte = data[i][1]["Energy Per Byte [J/ops]"].iloc[0]
-        power_per_flop = energy_per_flop / time_per_flop
-        power_per_byte = energy_per_byte / time_per_byte
-        constant_power = data[i][1]["Constant Power (W)"].median()
+    #     data[i][1].sort_values(by='OI')
+    #     # print(data[i][1])
+    #     # exit()
+    #     time_per_flop = data[i][1]["Time Per Flop [s/ops]"].iloc[-1]
+    #     time_per_byte = data[i][1]["Time Per Byte [s/ops]"].iloc[0]
+    #     energy_per_flop = data[i][1]["Energy Per Flop [J/ops]"].iloc[-1]
+    #     energy_per_byte = data[i][1]["Energy Per Byte [J/ops]"].iloc[0]
+    #     power_per_flop = energy_per_flop / time_per_flop
+    #     power_per_byte = energy_per_byte / time_per_byte
+    #     constant_power = data[i][1]["Constant Power (W)"].median()
         
-        data_new["Time Per Flop [s/ops]"].append(time_per_flop)
-        data_new["Time Per Byte [s/ops]"].append(time_per_byte)
-        data_new["Energy Per Flop [J/ops]"].append(energy_per_flop)
-        data_new["Energy Per Byte [J/ops]"].append(energy_per_byte)
-        data_new["Power Per Flop [W/ops]"].append(power_per_flop)
-        data_new["Power Per Byte [W/ops]"].append(power_per_byte)
-        data_new["Time balance [OI]"].append(time_per_byte / time_per_flop)
-        data_new["Energy balance [OI]"].append(energy_per_byte / energy_per_flop)
-        data_new["Constant Power [W]"].append(constant_power)
+    #     data_new["Time Per Flop [s/ops]"].append(time_per_flop)
+    #     data_new["Time Per Byte [s/ops]"].append(time_per_byte)
+    #     data_new["Energy Per Flop [J/ops]"].append(energy_per_flop)
+    #     data_new["Energy Per Byte [J/ops]"].append(energy_per_byte)
+    #     data_new["Power Per Flop [W/ops]"].append(power_per_flop)
+    #     data_new["Power Per Byte [W/ops]"].append(power_per_byte)
+    #     data_new["Time balance [OI]"].append(time_per_byte / time_per_flop)
+    #     data_new["Energy balance [OI]"].append(energy_per_byte / energy_per_flop)
+    #     data_new["Constant Power [W]"].append(constant_power)
+        
         
         # data_new["Time Per Flop [s/ops]"].append(data[i][1]["Time Per Flop [s/ops]"].iloc[-1])
         # data_new["Time Per Byte [s/ops]"].append(data[i][1]["Time Per Byte [s/ops]"].iloc[0])
