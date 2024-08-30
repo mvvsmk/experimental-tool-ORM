@@ -10,7 +10,7 @@ import json
 import threading
 import psutil
 import time
-from utils_power import run_with_energy_thread, set_power_cap
+from utils_power import run_with_energy_thread, set_power_cap, make_session_set_powercap, make_session_reset_powercap
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Compile and run ML object files created, with instrumentation")
@@ -166,7 +166,7 @@ def run_mlir_obj_papi(papi_counters_file,build_dir,output_dir,suffix,sudo_passwo
     df.to_csv(output_file_median)        
     print(f"Output written to {output_file}")
     print(f"Output median written to {output_file_median}")
-    return output_file_median
+    return df
 
 def run_mlir_obj_oracle(build_dir,output_dir,sudo_password,machine,suffix,power_cap_file = None, sleep_time=10,itr = 1):
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
@@ -282,7 +282,11 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machi
                 df.to_csv(output_file,index=False)
                 continue
             powercap_uW = power_cap * 1000000
-            set_power_cap(power_cap=powercap_uW,sudo_password=sudo_password)
+            if machine != "zen3":
+                set_power_cap(power_cap=powercap_uW,sudo_password=sudo_password)
+            else :
+                make_session_reset_powercap(default_powercap=76)
+                make_session_set_powercap(powercap=int(power_cap),default_powercap=76)
             mlir_file = os.path.join(build_dir,row["Name"])
             mlir_baseName = os.path.basename(mlir_file)
             mlir_baseName = os.path.splitext(mlir_baseName)[0]

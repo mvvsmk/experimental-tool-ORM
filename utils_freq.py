@@ -80,7 +80,7 @@ def get_available_frequencies_freq_scaling_file() -> list[int]:
    Get the available frequencies
    """
    try:
-       output = subprocess.check_output("cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_available_frequencies", shell=True)
+       output = subprocess.check_output("cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies", shell=True)
        frequencies = sorted(set(map(int, output.decode().split())))
        # if the highest frequency and second highest frequency within 1000 then remove the highest frequency
        frequencies.sort()
@@ -96,7 +96,7 @@ def get_available_frequencies_freq_scaling_file() -> list[int]:
 #check if the file /sys/devices/system/cpu/cpu*/cpufreq/scaling_available_frequencies exists
 def scaling_available_frequencies_present() -> bool:
     try:
-        output = subprocess.run("ls /sys/devices/system/cpu/cpu*/cpufreq/scaling_available_frequencies",shell=True,check=True)
+        output = subprocess.run("ls /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies",shell=True,check=True)
         return True
     except subprocess.CalledProcessError as e:
         print(f"Error running cpupower frequency-info: {e}")

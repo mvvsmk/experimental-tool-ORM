@@ -5,17 +5,20 @@ import psutil
 import time
 import pandas as pd
 from utils_energy import *
+from utils_corefreq import *
 
 rapl_energy_max = 2**32 - 1
 stop_event = threading.Event()
 
-def counter_thread(count,sudo_password):
+def counter_thread(count,sudo_password,machine):
     print("energy overflow thread running")
     pid = os.getpid()
     p = psutil.Process(pid)
     p.cpu_affinity([4])
     energy_msr = 1553
     command_to_read_energy = f"sudo -S rdmsr -u {energy_msr}"
+    if machine == "zen3" :
+        command_to_read_energy = f"sudo -S rdmsr -u 0xc001029B"
     energy_start = rapl_energy_max
     while not stop_event.is_set():
         try :
@@ -29,7 +32,7 @@ def counter_thread(count,sudo_password):
             count[0] += 1
             print(f"Energy overflows")
         energy_start = energy
-        time.sleep(42)
+        time.sleep(10)
 
 
 def get_max_power_cap_W(machine):
@@ -76,7 +79,7 @@ def run_with_energy_thread(command : str, password : str, machine : str) -> dict
     if stop_event.is_set():
         stop_event.clear()
     time.sleep(10)
-    counter_overflows = threading.Thread(target=counter_thread, args=(energy_overflows,password))
+    counter_overflows = threading.Thread(target=counter_thread, args=(energy_overflows,password,machine))
     counter_overflows.start()
     try :
         output = subprocess.run(command, shell=True, check=True,

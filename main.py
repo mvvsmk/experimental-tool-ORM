@@ -273,7 +273,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
             configure_polybench(kernel_dir=kernel_dir, 
                                 src_dir=default_verbose_polybench, 
                                 machine=machine, 
-                                file="papi_counters_raptorlake_flop.list")
+                                file="papi_counters_zen3_flop.list")
             
             build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
                                                                     build_dir=build_dir_papi, 
@@ -283,12 +283,12 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
             glc = run_kernels_papi(build_dir=build_dir_papi_polybench, 
                                     output_dir=papi_output_dir, 
                                     num_iterations=itr, 
-                                    suffix=suffix + "_glc", sleep=10, 
+                                    suffix=suffix + "_flop", sleep=10, 
                                     password=password, 
                                     high_performance_cores=True)
             
             configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, 
-                                machine=machine, file="papi_counters_raptorlake_mem.list")
+                                machine=machine, file="papi_counters_zen3_mem.list")
             
             build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
                                                         build_dir=build_dir_papi, 
@@ -298,7 +298,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
             perf = run_kernels_papi(build_dir=build_dir_papi_polybench, 
                                     output_dir=papi_output_dir, 
                                     num_iterations=itr, 
-                                    suffix=suffix + "_perf", sleep=10, 
+                                    suffix=suffix + "_mem", sleep=10, 
                                     password=password, 
                                     high_performance_cores=False)
             
@@ -376,6 +376,32 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         os.makedirs(build_dir_papi, exist_ok=True)
         mlir_src = os.path.join(kernel_dir, "./MLIR_OpenEarth_BenchMarks/mlir_obj/obj_only")
         build_dir_papi_mlir = compile_obj_with_instumentation(src_dir=mlir_src, build_dir=build_dir_papi,inst_type="papi")
+        
+        if machine == "raptorlake" or machine == "zen3":
+            df_flop = run_mlir_obj_papi(build_dir=build_dir_papi_mlir, output_dir=papi_output_dir, 
+                            #   machine=machine, 
+                            #   itr=itr, 
+                            papi_counters_file=os.path.join(kernel_dir,f"./papi_counters_{machine}_flop.list"),
+                            suffix=suffix + "_mlir", 
+                            sudo_password=password, 
+                            #   sleep=10
+                            )
+            df_mem = run_mlir_obj_papi(build_dir=build_dir_papi_mlir, output_dir=papi_output_dir, 
+                            #   machine=machine, 
+                            #   itr=itr, 
+                            papi_counters_file=os.path.join(kernel_dir,f"./papi_counters_{machine}_mem.list"),
+                            suffix=suffix + "_mlir", 
+                            sudo_password=password, 
+                            #   sleep=10
+                            )
+
+            merged_df = pd.merge(df_flop, df_mem, on="Name")
+            merged_output_file = os.path.join(papi_output_dir, f"kernel_data_MLIR_{suffix}_merged.csv")
+            merged_df.to_csv(merged_output_file, index=False)
+            print(f"Saved merged data to {merged_output_file}")
+
+            
+        
         run_mlir_obj_papi(build_dir=build_dir_papi_mlir, output_dir=papi_output_dir, 
                         #   machine=machine, 
                         #   itr=itr, 

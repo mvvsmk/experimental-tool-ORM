@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import time
-from utils_power import run_with_energy_thread, set_power_cap
+from utils_power import run_with_energy_thread, set_power_cap, make_session_set_powercap, make_session_reset_powercap
 
 def run_kernels_energy_and_time(file_to_run,password,machine):
     command = f"echo {password} | sudo -S taskset -c 0 {file_to_run}"
@@ -86,16 +86,39 @@ def powercap_collect_kernels_energy_and_time(build_dir, output_dir,
         data = {
             "Name" : df_prev["Name"].values.tolist(),
             "Energy(J)" : df_prev["Energy(J)"].values.tolist(),
-            "Time(s)" : df_prev["Time(s)"].values.tolist()
+            "Time(s)" : df_prev["Time(s)"].values.tolist(),
+            "Power Cap(W)" : df_prev["Power Cap(W)"].values.tolist()
         }
     
     df_power_caps = pd.read_csv(powercap_file)
     
     for i, file in enumerate(os.listdir(build_dir)):
         run_itr = num_itr
+        # print(df_power_caps[df_power_caps["Benchmarks"] == file])
+        # exit()
         powercap = df_power_caps[df_power_caps["Benchmarks"] == file][machine].values[0]
-        set_power_cap(powercap, password)
+        if powercap == "NC" or (type(powercap) is str and powercap[0].isalpha()):
+            data["Name"].append(file)
+            data["Energy(J)"].append(0)
+            data["Time(s)"].append(0)
+            data["PowerCap(W)"].append(0)
+            df = pd.DataFrame(data)
+            df.to_csv(output_csv,index=False)
+            continue
         
+        powercap_uW = powercap * 1000_000
+        print(f"powercap :{powercap}")
+        print(f"powercap uW :{powercap_uW}")
+        # set_power_cap(powercap, password)
+                    # if power cap is NC
+        
+        if machine != "zen3":
+            set_power_cap(power_cap=powercap_uW,sudo_password=password)
+        else :
+            print(f"setting it to {int(powercap)}")
+            make_session_reset_powercap(default_powercap=76)
+            make_session_set_powercap(powercap=int(powercap),default_powercap=76)
+            
         if df_prev is not None and file in df_prev["Name"].values:
             run_itr = num_itr - df_prev[df_prev["Name"] == file].shape[0]
         
@@ -111,6 +134,7 @@ def powercap_collect_kernels_energy_and_time(build_dir, output_dir,
             data["Name"].append(file)
             data["Energy(J)"].append(energy_r)
             data["Time(s)"].append(time_r)
+            data["Power Cap(W)"].append(powercap)
             print(f"Ran {file} {j+1} times")
             df = pd.DataFrame(data)
             df.to_csv(output_csv, index=False)

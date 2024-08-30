@@ -174,6 +174,32 @@ machine_data_cache = {
             'line_size' : '64',
         },
     },
+    'zen3': {
+        'L1I' : {
+            'cache_type' : 'i',
+            'cache_size' : '32768',
+            'associativity' : '1',  # default value assumed
+            'line_size' : '64',
+        },
+        'L1D' : {
+            'cache_type' : 'd',
+            'cache_size' : '32768',
+            'associativity' : '8',
+            'line_size' : '64',
+        },
+        'L2' : {
+            'cache_type' : 'u',
+            'cache_size' : '524288',
+            'associativity' : '8',
+            'line_size' : '64',
+        },
+        'L3' : {
+            'cache_type' : 'u',
+            'cache_size' : '33554432',
+            'associativity' : '0',
+            'line_size' : '64',
+        },
+    },
 
 }
 

@@ -21,7 +21,7 @@ for str in "${strings[@]}"; do
   for ITRS in "${iterations[@]}"; do
     for SLEEP_TIME in "${sleep_times[@]}"; do
       # Define the folder name with the iteration and sleep time suffix
-      FOLDER_NAME="${OUTPUT_DIR}/${DATE}/${MACHINE}_multiple_roofline/${TYPE}_itr${ITRS}_sleep${SLEEP_TIME}_157"
+      FOLDER_NAME="${OUTPUT_DIR}/${DATE}/${MACHINE}_multiple_roofline/${TYPE}_itr${ITRS}_sleep${SLEEP_TIME}_160"
       
       # Remove the folder if it exists
       echo $PASSWORD | sudo -S rm -rf ${FOLDER_NAME}

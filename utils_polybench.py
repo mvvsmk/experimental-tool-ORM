@@ -180,3 +180,8 @@ def build_polybench_kernels_papi(src_dir, build_dir, dataset="LARGE_DATASET", da
     print(f"Compiled binaries saved to: {build_dir}")
     print(f"Number of files compiled: {counter}")
     return build_dir
+
+if __name__ == "__main__":
+    build_polybench_kernels_energy_time(src_dir="/home/nilesh/Manoj/experimental-tool-ORM/kernels/PolyBenchC-4.2.1_mem_fencing",
+                                        build_dir="/home/nilesh/Manoj/experimental-tool-ORM/kernels/PolyBenchC-4.2.1_mem_fencing/build_test",
+                                        dataset="EXTRALARGE_DATASET", data_type="DATA_TYPE_IS_DOUBLE")
