@@ -120,7 +120,7 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
 
     # create a dictionary to store the data
     data_new = {
-        "Frequency(kHz)": [],
+        "Cache": [],
         "Time Per Flop [s/ops]": [],
         "Time Per Byte [s/ops]": [],
         "Energy Per Flop [J/ops]": [],
@@ -191,6 +191,7 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
         data_new["Constant Energy Per Flop [J/ops]"].append(constant_energy_per_flop)
         data_new["Constant Flop Energy Efficiency"].append(constant_flop_energy_efficiency)
         data_new["New Balance Energy"].append(new_balance_energy)
+        data_new["Cache"].append(data[i][0])
 
 
     # for i, freq in enumerate(frequencies):
@@ -231,7 +232,7 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
         # data_new["Power Per Byte [W/ops]"].append(data_new["Energy Per Byte [J/ops]"][-1] / data_new["Time Per Byte [s/ops]"][-1])
         # data_new["Time balance [OI]"].append(data_new["Time Per Byte [s/ops]"][-1] / data_new["Time Per Flop [s/ops]"][-1])
         # data_new["Energy balance [OI]"].append(data_new["Energy Per Byte [J/ops]"][-1] / data_new["Energy Per Flop [J/ops]"][-1])
-        
+
 
     
     print(data_new)
@@ -241,9 +242,91 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
     # # save the dataframe to a csv file
     output_file = f"roofline_constants_{machine}.csv"
     #sort the dataframe by frequency
-    df = df.sort_values(by='Frequency(kHz)')
+    # df = df.sort_values(by='Frequency(kHz)')
     df.to_csv(os.path.join(output_folder, output_file), index=False)
-
+    exit()
+    oi_points = np.logspace(start=-4,stop=2,num=10000)
+    #     data_new = {
+    #     "Frequency(kHz)": [],
+    #     "Time Per Flop [s/ops]": [],
+    #     "Time Per Byte [s/ops]": [],
+    #     "Energy Per Flop [J/ops]": [],
+    #     "Energy Per Byte [J/ops]": [],
+    #     "Power Per Flop [W/ops]" : [],
+    #     "Power Per Byte [W/ops]" : [],
+    #     "Time balance [OI]" : [],
+    #     "Energy balance [OI]" : [],
+    #     "Constant Power [W]" : [],
+    #     "Constant Energy Per Flop [J/ops]" : [],
+    #     "Constant Flop Energy Efficiency" : [],
+    #     "New Balance Energy" : [],
+    # }
+    
+    # iterate through all the caches
+    assumed_bytes = [1000_000_000] * len(oi_points)
+    assumed_flops = [oi_points_ * assumed_bytes_ for oi_points_, assumed_bytes_ in zip(oi_points, assumed_bytes)]
+    all_predicted_power = []
+    all_predicted_performance = []
+    
+    for i, row in df.iterrows():
+        cache = row["Cache"]
+        time_per_flop = row["Time Per Flop [s/ops]"]
+        time_per_byte = row["Time Per Byte [s/ops]"]
+        energy_per_flop = row["Energy Per Flop [J/ops]"]
+        energy_per_byte = row["Energy Per Byte [J/ops]"]
+        power_per_flop = row["Power Per Flop [W/ops]"]
+        power_per_byte = row["Power Per Byte [W/ops]"]
+        time_balance = row["Time balance [OI]"]
+        energy_balance = row["Energy balance [OI]"]
+        constant_power = row["Constant Power [W]"]
+        constant_energy_per_flop = row["Constant Energy Per Flop [J/ops]"]
+        constant_flop_energy_efficiency = row["Constant Flop Energy Efficiency"]
+        new_balance_energy = row["New Balance Energy"]
+        
+        # predicted_times = max(assumed_bytes * time_per_byte + assumed_flops * time_per_flop)
+        predicted_times = [max(assumed_bytes_ * time_per_byte , assumed_flops_ * time_per_flop) for assumed_bytes_, assumed_flops_ in zip(assumed_bytes, assumed_flops)]
+        # for i, assumed_bytes_ in enumerate(assumed_bytes):
+        #     predicted_time = max(assumed_bytes_ * time_per_byte , assumed_flops[i] * time_per_flop)
+        #     print(predicted_time)
+        is_memory_bound = [1 if x < time_balance else 0 for x in oi_points]
+        predicted_power = [constant_power + (power_per_byte * ((1-is_memory_bound_) * (time_balance / oi_points_) + is_memory_bound_) + power_per_flop * (is_memory_bound_ * (oi_points_ / time_balance) + (1 - is_memory_bound_))) for is_memory_bound_, oi_points_ in zip(is_memory_bound, oi_points)]
+        predicted_performance = [assumed_flops_ / predicted_times_ for assumed_flops_, predicted_times_ in zip(assumed_flops, predicted_times)]
+        # print(predicted_power)
+        # print("------------")
+        all_predicted_power.append(predicted_power)
+        all_predicted_performance.append(predicted_performance)
+    
+    # plot a 2 graphs in one figure one for the predicted power and the other for the predicted performance agains the oi_points 
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(20, 10))
+    for predicted_power_ in all_predicted_power:
+        ax[0].plot(oi_points, predicted_power_, label="Predicted Power")
+    # ax[0].plot(oi_points, predicted_power, label="Predicted Power")
+    ax[0].set_xscale("log")
+    ax[0].set_yscale("log")
+    ax[0].set_xlabel("OI")
+    ax[0].set_ylabel("Power(W)")
+    ax[0].set_title("Predicted Power plot")
+    ax[0].yaxis.set_major_locator(LogLocator(base=10.0, numticks=10))
+    ax[0].yaxis.set_minor_locator(LogLocator(base=10.0, subs='auto', numticks=100))
+    ax[0].grid(which="both")
+    ax[0].legend()
+    
+    # ax[1].plot(oi_points, predicted_performance, label="Predicted Performance")
+    for predicted_performance_ in all_predicted_performance:
+        ax[1].plot(oi_points, predicted_performance_, label="Predicted Performance")
+    ax[1].set_xscale("log")
+    ax[1].set_yscale("log")
+    ax[1].set_xlabel("OI")
+    ax[1].set_ylabel("Performance(GFlops/s)")
+    ax[1].set_title("Predicted Performance plot")
+    ax[1].yaxis.set_major_locator(LogLocator(base=10.0, numticks=10))
+    ax[1].yaxis.set_minor_locator(LogLocator(base=10.0, subs='auto', numticks=100))
+    ax[1].grid(which="both")
+    ax[1].legend()
+    
+    # show the plot
+    fig.plot()
+    fig.savefig(os.path.join(f"predicted_power_performance_{machine}.png"))
 
 
 if __name__ == "__main__":
