@@ -39,7 +39,7 @@ def compile_obj_with_instumentation(build_dir,src_dir,inst_type):
             mlir_baseName = os.path.splitext(mlir_baseName)[0]
             mlir_baseName = os.path.join(build_dir,mlir_baseName)
             mlir_baseName = mlir_baseName + "_inst"
-            compile_command = "gcc -I {papi_headers_dir} {C_runner} {mlir_file} {inst_commands} -lm -ldl -lmlir_c_runner_utils -L {mlir_libs} -o {mlir_baseName}"
+            compile_command = "g++ -I {papi_headers_dir} {C_runner} {mlir_file} {inst_commands} -lm -ldl -lmlir_c_runner_utils -L {mlir_libs} -o {mlir_baseName}"
             compile_command = compile_command.format(papi_headers_dir=papi_headers_dir,
                                                      C_runner=C_runner,mlir_file=mlir_file,mlir_baseName=mlir_baseName,
                                                      inst_commands=inst_commands,mlir_libs=mlir_libs)
