@@ -101,7 +101,7 @@ def powercap_collect_kernels_energy_and_time(build_dir, output_dir,
             data["Name"].append(file)
             data["Energy(J)"].append(0)
             data["Time(s)"].append(0)
-            data["PowerCap(W)"].append(0)
+            data["Power Cap(W)"].append(0)
             df = pd.DataFrame(data)
             df.to_csv(output_csv,index=False)
             continue
