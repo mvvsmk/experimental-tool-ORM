@@ -267,8 +267,8 @@ def getcache_array_mapping(machine,cache):
         'DRAM' : 314572800
     },
     "raptorlake" :{
-        'L1D' : 768,
-        'L2' : 8192,
+        'L1D' : 2048,
+        'L2' : 16384,
         'L3' : 196608, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
         'DRAM' : 314572800
     },
@@ -595,7 +595,12 @@ def get_energy_roofline_time_benchmarks(sudo_password,
             print(f"papi_counter: {papi_counter}")
             print(f"array_len: {array_len}")
             print(f"array len * base_array_len_a_roofline_energy: {array_len * base_array_len_a_roofline_energy}")
-            print(f"byes in array : {array_len * base_array_len_a_roofline_energy * 8 * 8}")          
+            print(f"byes in array : {array_len * base_array_len_a_roofline_energy * 8 * 8}")     
+            if is_Fma_only :
+                array_len = getcache_array_mapping(machine=machine,cache='DRAM')
+                array_sizes_to_run = [array_len]
+                dur = get_time_duration('DRAM') * 1000
+     
             for array_size in array_sizes_to_run:
                 energy_readings = []
                 readings = {}
@@ -668,9 +673,9 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                     total_flops = float(output_list[-2])
                     total_missed_bytes = float(output_list[-1])
                     const_power_data = constant_power
-                    if is_Fma_only:
-                        total_missed_bytes = 0
-                        OI = float('inf')
+                    # if is_Fma_only:
+                    #     total_missed_bytes = 0
+                    #     OI = float('inf')
                     
                     data2["Frequency(kHz)"].append(freq)
                     data2["Execution Time(s)"].append(execution_time)
