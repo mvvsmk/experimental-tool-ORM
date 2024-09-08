@@ -281,6 +281,7 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machi
                 df = pandas.DataFrame(data)
                 df.to_csv(output_file,index=False)
                 continue
+            powercap = float(power_cap)
             powercap_uW = power_cap * 1000000
             if machine != "zen3":
                 set_power_cap(power_cap=powercap_uW,sudo_password=sudo_password)

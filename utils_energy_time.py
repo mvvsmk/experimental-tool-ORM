@@ -106,6 +106,7 @@ def powercap_collect_kernels_energy_and_time(build_dir, output_dir,
             df.to_csv(output_csv,index=False)
             continue
         
+        powercap = float(powercap)
         powercap_uW = powercap * 1000_000
         print(f"powercap :{powercap}")
         print(f"powercap uW :{powercap_uW}")
