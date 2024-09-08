@@ -514,7 +514,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     make_benchmarks_only_fma(build_dir,source_dir,MAD_PER_ELEMENT=machine_to_reg_map[machine],machine=machine)    
     
     
-    MAD_PER_ELEMENT_values = np.logspace(0,5,25,base=10).astype(int)
+    MAD_PER_ELEMENT_values = [0]
     # MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[1,2,3,4,5,6,7,8,9])
     # MAD_PER_ELEMENT_values = [1, 10 ,100, 1000, 10000]
     Mad_PER_ELEMENT_values = list(set(MAD_PER_ELEMENT_values))
@@ -842,7 +842,7 @@ if __name__ == "__main__":
                                             suffix=f"{freq}kHz",zzz=zzz,frequency=freq,energy_mul=get_energy_multiplication_factor(args.machine),
                                             high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,ITR_ENV=ITR_ENV)
         plot_muliple_roofline(result_folder=output_dir_freq,output_folder=output_dir_freq,machine=machine)
-        exit()
+        # exit()
         state["list ran"].append(freq)
         save_state(state, 'energy_validation_state.json')
         print(f"State saved successfully after running at frequency {freq}kHz")
