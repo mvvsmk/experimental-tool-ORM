@@ -8,6 +8,16 @@ and set the frequency of the cpu to a specific value
 import subprocess
 import os
 
+def set_uncore_freq(frequency,password) -> None:
+    command1 = f"echo '{frequency}'  | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
+    command2 = f"echo '{frequency}'  | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
+    try:
+        subprocess.run([command1],input=password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([command2],input=password.encode('utf-8'),shell=True,check=True)
+        print(f"Uncore Frequency set to {frequency}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error setting uncore frequency to {frequency}: {e}")
+
 def convert_frequency(frequencies) -> list[int]:
     converted_frequencies = []
     for freq in frequencies:

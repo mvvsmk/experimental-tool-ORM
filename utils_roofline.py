@@ -7,7 +7,7 @@ import subprocess
 import numpy as np          
 from utils_likwid import Likwid
 import pandas as pd
-from utils_freq import get_available_frequencies,set_frequency,set_governer
+from utils_freq import get_available_frequencies,set_frequency,set_governer,set_uncore_freq
 from utils_exp_params import check_exp_setup
 from utils_state import load_state, save_state
 from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell, make_sum_squares_asm_zen3
@@ -493,7 +493,8 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                                         machine,
                                         constant_power,
                                         ITR_ENV,
-                                        itr=11) -> None:
+                                        itr=11,
+                                        caches = ['L1D' , 'L2' , 'L3', 'DRAM']) -> None:
 
     if os.path.exists(build_dir):
         shutil.rmtree(build_dir)
@@ -840,12 +841,20 @@ if __name__ == "__main__":
         if freq in state["list ran"]:
             print(f"Frequency {freq}kHz already ran.")
             continue
-        set_frequency(frequency=freq,sudo_password=sudo_password)
+        
+        caches = ['L1D' , 'L2' , 'L3', 'DRAM']
+        if args.core :
+            set_frequency(frequency=freq,sudo_password=sudo_password)
+        else :
+            caches = ['DRAM']
+            set_uncore_freq(frequency=freq,sudo_password=sudo_password)
+
         constant_power = get_constant_power(machine,sudo_password,1)
         print(f"sleep {zzz} itr {itr}")
         get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir_freq,
                                             suffix=f"{freq}kHz",zzz=zzz,frequency=freq,energy_mul=get_energy_multiplication_factor(args.machine),
-                                            high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,ITR_ENV=ITR_ENV)
+                                            high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,ITR_ENV=ITR_ENV,
+                                            caches=caches)
         plot_muliple_roofline(result_folder=output_dir_freq,output_folder=output_dir_freq,machine=machine)
         # exit()
         state["list ran"].append(freq)
