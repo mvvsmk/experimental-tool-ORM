@@ -78,10 +78,11 @@ def sudo_call_cpupower(password,args) -> None:
     Display the current governer
     """
     try :
-        output = subprocess.run([f"sudo -S cpupower {args}"], input=password.encode('utf-8'),shell=True,capture_output=True,check=True)
+        output = subprocess.run([f"sudo -S LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower {args}"], input=password.encode('utf-8'),shell=True,capture_output=True,check=True)
         print("---------------------------------------")
         print(f"exec cpupower frequency-info\n stdout : {output.stdout.decode('utf-8')} \n stderr : {output.stderr.decode('utf-8')}")
         print("---------------------------------------")
+        return output
     except subprocess.CalledProcessError as e:
         print(f"Error running cpupower frequency-info with {args}: {e}")
 
@@ -121,6 +122,35 @@ def check_cpupower() -> bool:
     except subprocess.CalledProcessError as e:
         print(f"Error running cpupower frequency-info: {e}")
         return False
+
+
+def get_active_governor(password) -> str:
+    # Run the cpupower frequency-info command
+    try:
+        result = sudo_call_cpupower(password=password,args="frequency-info")
+
+        # Check if the command ran successfully
+        if result.returncode != 0:
+            raise Exception(f"Error: {result.stderr}")
+        # print("here")
+        
+        # Split the output into lines
+        lines = result.stdout.decode().split('\n')
+        
+        # Search for the line containing the active governor
+        for line in lines:
+            if 'The governor "' in line:
+                # Extract the governor name between the quotes
+                governor = line.split('"')[1]
+                return governor
+        
+        # Return a message if no governor was found
+        return "Governor information not found"
+    
+    except Exception as e:
+        return str(e)
+
+
 
 def get_available_frequencies_cpupower() -> list[int]:
     """

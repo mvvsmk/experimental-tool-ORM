@@ -58,7 +58,7 @@ def parse_args():
                         help='what are the experimenatal setup\n g_userspace \n no_prefetcher \n no_turbo', 
                         required=False)
     args = parser.parse_args()
-    args.suffix = args.suffix + formatted_datetime
+    args.suffix = args.suffix + formatted_datetime + "_"+ args.machine + "_"+ args.inst_type + "_"+ args.benchmarks + "_"+ args.dataset + "_"+ args.data_type + "_"+ str(args.itr) + "_"+ get_active_governor(password=args.password)
     return args
 
 def main():

@@ -551,7 +551,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
             }
         
     # caches = ['L1' , 'L2' , 'L3' ,'DRAM']
-    caches = ['L1D' , 'L2' , 'L3', 'DRAM']
+    # caches = ['L1D' , 'L2' , 'L3', 'DRAM']
     # caches = ['L3' ]
     
     # testing purposes
