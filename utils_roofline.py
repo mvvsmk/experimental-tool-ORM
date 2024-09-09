@@ -471,6 +471,8 @@ def parse_args() -> argparse.Namespace:
     # argument for sleep time
     parser.add_argument('--sleep_time', type=int, help='sleep time', default=20)
     parser.add_argument('--env_ITR', type=int, help='number of iterations for benchmark', default=11)
+    #
+    parser.add_argument('--core', action='store_true', help='measure core , default is uncore')
 
     #check if machine in raptorlake, rocketlake or broadwell
     args = parser.parse_args()
@@ -843,16 +845,18 @@ if __name__ == "__main__":
             continue
         
         caches = ['L1D' , 'L2' , 'L3', 'DRAM']
+        freq_suff = f"{freq}kHz"
         if args.core :
             set_frequency(frequency=freq,sudo_password=sudo_password)
         else :
+            freq_suff = f"{freq}kHz_uncore"
             caches = ['DRAM']
             set_uncore_freq(frequency=freq,sudo_password=sudo_password)
 
         constant_power = get_constant_power(machine,sudo_password,1)
         print(f"sleep {zzz} itr {itr}")
         get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir_freq,
-                                            suffix=f"{freq}kHz",zzz=zzz,frequency=freq,energy_mul=get_energy_multiplication_factor(args.machine),
+                                            suffix=freq_suff,zzz=zzz,frequency=freq,energy_mul=get_energy_multiplication_factor(args.machine),
                                             high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,ITR_ENV=ITR_ENV,
                                             caches=caches)
         plot_muliple_roofline(result_folder=output_dir_freq,output_folder=output_dir_freq,machine=machine)
