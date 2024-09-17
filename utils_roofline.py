@@ -7,13 +7,15 @@ import subprocess
 import numpy as np          
 from utils_likwid import Likwid
 import pandas as pd
-from utils_freq import get_available_frequencies,set_frequency,set_governer,set_uncore_freq
+import datetime
+from utils_freq import get_available_frequencies,set_frequency,set_governer,set_uncore_freq_intel,get_max_uncore_freq_intel
 from utils_exp_params import check_exp_setup
 from utils_state import load_state, save_state
 from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell, make_sum_squares_asm_zen3
 from utils_asm import make_sum_squares_ams_only_flops
 from utils_roofline_plot import plot_muliple_roofline
 from utils_energy import get_energy_multiplication_factor
+from utils_curve_fit_const import get_curve_constants
 import psutil
 
 base_array_len_a_roofline_energy = 64
@@ -25,7 +27,7 @@ def run_command_and_monitor(command, sudo_password):
     process_psutil = psutil.Process(process.pid)
     
     start_time = time.time()
-    timeout = 1200  # Timeout after 1200 seconds (20 minutes)
+    timeout = 2400  # Timeout after 2400 seconds (40 minutes)
 
     while True:
         time.sleep(5)  # Check every 5 seconds
@@ -205,10 +207,10 @@ machine_data_cache = {
 
 def get_time_duration(cache):
     data = {
-        'L1D' : 70000,
-        'L2' : 10000,
-        'L3' : 10000,
-        'DRAM' : 1,
+        'L1D' : 700000,
+        'L2' : 100000,
+        'L3' : 1000,
+        'DRAM' : 10,
     }
     return data[cache]
         
@@ -263,25 +265,25 @@ def getcache_array_mapping(machine,cache):
     "broadwell" :{
         'L1D' : 640,
         'L2' : 6400,
-        'L3' : 64000, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
-        'DRAM' : 314572800
+        'L3' : 64000,
+        'DRAM' : 209715200
     },
     "raptorlake" :{
         'L1D' : 2048,
         'L2' : 16384,
-        'L3' : 196608, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
-        'DRAM' : 314572800
+        'L3' : 221184,
+        'DRAM' : 209715200
     },
     "rocketlake" :{
         'L1D' : 5120,
         'L2' : 15872,
-        'L3' : 131072, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
-        'DRAM' : 314572800
+        'L3' : 131072,
+        'DRAM' : 209715200
     },
     "zen3" :{
         'L1D' : 5120,
         'L2' : 15872,
-        'L3' : 131072, # may be we could use 'perf::PERF_COUNT_HW_CACHE_LL:ACCESS' for L3
+        'L3' : 131072,
         'DRAM' : 209715200
     },
     }
@@ -292,7 +294,7 @@ def get_constant_power(machine : str,sudo_pass :str, duration :str) -> float:
     count = 0
     while count < 3:
         try:
-            output = subprocess.run(f"./bash/constant_power_measurement.sh {sudo_pass} {duration}",shell=True,capture_output=True,check=True,timeout=1200)
+            output = subprocess.run(f"./bash/constant_power_measurement.sh {sudo_pass} {duration}",shell=True,capture_output=True,check=True,timeout=3000)
         except subprocess.CalledProcessError as e:
             print(f"Error: running constant_power_measurement.sh failed with return code {e.returncode}")
             continue
@@ -494,7 +496,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                                         high_power,
                                         machine,
                                         constant_power,
-                                        ITR_ENV,
+                                        core,
                                         itr=11,
                                         caches = ['L1D' , 'L2' , 'L3', 'DRAM']) -> None:
 
@@ -508,17 +510,27 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     output_file = os.path.join(output_dir,f"a_roofline_model_for_energy_benchmarks_{suffix}.csv")
     
     machine_to_reg_map = {
-        "raptorlake" : 16,
+        "raptorlake" : 32,
         "rocketlake" : 32,
         "brodwell" : 16,
         "zen3" : 16,
     }
     #make only flop benchmark
+    # exit()
     make_benchmarks_only_fma(build_dir,source_dir,MAD_PER_ELEMENT=machine_to_reg_map[machine],machine=machine)    
     
+    # MAD_PER_ELEMENT_values = [0]
+    # MAD_PER_ELEMENT_values = [0,50000]
+    MAD_PER_ELEMENT_values = np.logspace(1,3,num=10)
+    MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
     
-    MAD_PER_ELEMENT_values = [0]
-    # MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[1,2,3,4,5,6,7,8,9])
+    if caches[0] == 'DRAM' :
+        MAD_PER_ELEMENT_values = np.logspace(1,3,num=10).astype(int)
+        MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
+    
+    if core:
+        MAD_PER_ELEMENT_values = [0,50000]   
+    
     # MAD_PER_ELEMENT_values = [1, 10 ,100, 1000, 10000]
     Mad_PER_ELEMENT_values = list(set(MAD_PER_ELEMENT_values))
     print(f"MAD_PER_ELEMENT_values: {MAD_PER_ELEMENT_values}")
@@ -529,7 +541,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     # make benchmarks
     for MAD_PER_ELEMENT in MAD_PER_ELEMENT_values:
         # Likwid.clear_cache()
-        print(f"Making benchmarks for MAD_PER_ELEMENT: {MAD_PER_ELEMENT} and ITR_ENV: {ITR_ENV}")
+        print(f"Making benchmarks for MAD_PER_ELEMENT: {MAD_PER_ELEMENT}")
         make_benchmarks(build_dir,source_dir,MAD_PER_ELEMENT,machine=machine)
         print(f"Made benchmarks for MAD_PER_ELEMENT: {MAD_PER_ELEMENT}")
 
@@ -550,15 +562,6 @@ def get_energy_roofline_time_benchmarks(sudo_password,
             "Array Size" : [],
             }
         
-    # caches = ['L1' , 'L2' , 'L3' ,'DRAM']
-    # caches = ['L1D' , 'L2' , 'L3', 'DRAM']
-    # caches = ['L3' ]
-    
-    # testing purposes
-    if machine == "zen3":
-        caches = ['DRAM']
-        
-    
     print(f"build_dir: {build_dir}")
     files = os.listdir(build_dir)
     print(f"files: {files}")
@@ -602,7 +605,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
             if is_Fma_only :
                 array_len = getcache_array_mapping(machine=machine,cache='DRAM')
                 array_sizes_to_run = [array_len]
-                dur = get_time_duration('DRAM') * 1000
+                dur = get_time_duration('DRAM') * 1
      
             for array_size in array_sizes_to_run:
                 energy_readings = []
@@ -650,11 +653,12 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                             if output_list != [] and output_list != ['']:
                                 break
                             count += 1
-                            if count > 15:
+                            time.sleep(120)
+                            print("sleeping for 120 seconds")
+                            if count > 20:
                                 print(f"Error: Running the file {filename}")
                                 exit()
                                 break
-                            # time.sleep(zzz)
 
                         if len(output_list) == 0:
                             print(f"Error: output_list is empty for {filename}")
@@ -753,6 +757,7 @@ if __name__ == "__main__":
         "build_dir" : "",
         "output_dir" : "",
         "sudo_password" : "",
+        "core": False,
         "powercap" : False,
         "list of freq or powercap" : [],
         "list ran" : [],
@@ -767,7 +772,7 @@ if __name__ == "__main__":
     sudo_password = args.password
     itr = args.iterations
     zzz = args.sleep_time
-    ITR_ENV = args.env_ITR
+    core = args.core
 
     #check if all paths are absolute paths or convert them to absolute paths
     if not os.path.isabs(args.build_dir):
@@ -825,46 +830,61 @@ if __name__ == "__main__":
     power_cap_list = []
     list_of_freq = []
     list_of_freq = state["list of freq or powercap"]
-    # if powercap:
-    #     power_cap_list = state["list of freq or powercap"]
-    # else:
-    #     list_of_freq = state["list of freq or powercap"]
 
-    if machine != 'raptorlake' :
+    #TODO: check if the machine is callibrated correctly
+    if machine != 'raptorlake' or machine != 'zen3':
         Likwid.disable_prefetchers(sudo_password=sudo_password)
+        Likwid.disable_turbo_boost(sudo_password=sudo_password)
+    
+    caches = ['L1D' , 'L2' , 'L3', 'DRAM']
+    min_freq = min(list_of_freq)
+    max_freq = max(list_of_freq)
+    if core :
+        list_of_freq = list_of_freq
     else :
-        command = "sudo -S wrmsr 420 47"
-        subprocess.run(command, shell=True, check=True, input=sudo_password.encode('utf-8'))
-    Likwid.disable_turbo_boost(sudo_password=sudo_password)
-
+        max_uncore_freq = get_max_uncore_freq_intel()
+        min_uncore_freq = min_freq
+        # lis of frequencies is from max to min with step of 100MHz the values are in kHz
+        list_of_freq = list(range(max_uncore_freq,min_uncore_freq,-100000))
+        list_of_freq.append(min_uncore_freq)
+        caches = ['DRAM']
+        set_frequency(sudo_password=sudo_password,frequency=min_freq)
+    
     for freq in list_of_freq:
         output_dir_freq = os.path.join(output_dir,f"{freq}kHz")
+        freq_suff = f"{freq}kHz"
+        if core :
+            freq_run=freq
+            set_frequency(frequency=freq,sudo_password=sudo_password)
+        else :
+            freq_run = min_freq
+            freq_suff = f"{freq}kHz_uncore"
+            set_uncore_freq_intel(frequency=freq,password=sudo_password)
+            output_dir_freq = os.path.join(output_dir,f"uncore_{freq}kHz")
         os.makedirs(output_dir_freq,exist_ok=True)
+        
+    
         if freq in state["list ran"]:
             print(f"Frequency {freq}kHz already ran.")
             continue
-        
-        caches = ['L1D' , 'L2' , 'L3', 'DRAM']
-        freq_suff = f"{freq}kHz"
-        if args.core :
-            set_frequency(frequency=freq,sudo_password=sudo_password)
-        else :
-            freq_suff = f"{freq}kHz_uncore"
-            caches = ['DRAM']
-            set_uncore_freq(frequency=freq,sudo_password=sudo_password)
-
+    
         constant_power = get_constant_power(machine,sudo_password,1)
         print(f"sleep {zzz} itr {itr}")
         get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir_freq,
-                                            suffix=freq_suff,zzz=zzz,frequency=freq,energy_mul=get_energy_multiplication_factor(args.machine),
-                                            high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,ITR_ENV=ITR_ENV,
-                                            caches=caches)
+                                            suffix=freq_suff,zzz=zzz,frequency=freq_run,energy_mul=get_energy_multiplication_factor(args.machine),
+                                            high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,
+                                            caches=caches,core=core)
         plot_muliple_roofline(result_folder=output_dir_freq,output_folder=output_dir_freq,machine=machine)
         # exit()
         state["list ran"].append(freq)
         save_state(state, 'energy_validation_state.json')
         print(f"State saved successfully after running at frequency {freq}kHz")
 
+    #get date and time
+    current_datetime = datetime.datetime.now()
+    formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+    curve_const = get_curve_constants(output_dir=output_dir, caches=caches)
+    curve_const.to_csv(os.path.join(output_dir,f"curve_constants_for_{machine}_{formatted_datetime}"),index=False)
     os.remove('energy_validation_state.json')
     print("State file deleted successfully.")
     print("=============================================================================")

@@ -8,7 +8,17 @@ and set the frequency of the cpu to a specific value
 import subprocess
 import os
 
-def set_uncore_freq(frequency,password) -> None:
+#get max uncore frequency intel
+def get_max_uncore_freq_intel() -> int:
+    try:
+        output = subprocess.check_output("cat /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/initial_max_freq_khz", shell=True)
+        return int(output.decode())
+    except subprocess.CalledProcessError as e:
+        print(f"Error running cpupower frequency-info: {e}")
+        return 0
+
+
+def set_uncore_freq_intel(frequency,password) -> None:
     command1 = f"echo '{frequency}'  | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
     command2 = f"echo '{frequency}'  | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
     try:
