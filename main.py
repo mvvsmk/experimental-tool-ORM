@@ -50,7 +50,7 @@ def parse_args():
     parser.add_argument("--suffix", type=str, default=f"", help="Suffix for the experiment directory")
     parser.add_argument("--password", type=str, required=True, help="Password for sudo")
     parser.add_argument("--inst_type", type=str, required=True, help="oracle, oracle+powercap, powercap, papi")
-    parser.add_argument("--benchmarks", type=str, required=True, help="MLIR, Polybench, Polybench-tiled, Polybench-multithreaded")
+    parser.add_argument("--benchmarks", type=str, required=True, help="MLIR, Polybench, Polybench-tiled, Polybench-pluto-openmp")
     parser.add_argument("--itr", type=int, default=1, help="Number of iterations to run the experiments")
     parser.add_argument("--freq_change", type=bool, default=False, help="Change the frequency")
     parser.add_argument('-e','--exp_conditions',
@@ -207,13 +207,13 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
                                                machine=machine, num_itr=itr,
                                                suffix=suffix, password=password, sleep=10)    
 
-    if oracle and benchmark == "Polybench-multithreaded":
+    if oracle and benchmark == "Polybench-pluto-openmp":
         print("Capturing oracle data")
         # Run the experiments
         oracle_output_dir = setup_oracle_dir_structure(tools_dir=os.curdir, machine_name=machine, suffix=suffix)
         build_dir_oracle = os.path.join(build_dir, "oracle")
         os.makedirs(build_dir_oracle, exist_ok=True)
-        mem_fencing_src = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_mem_fencing_parallel")
+        mem_fencing_src = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_pluto_openmp")
         build_dir_oracle_polybench = build_polybench_kernels_energy_time_parallel(src_dir=mem_fencing_src, 
                                                                          build_dir=build_dir_oracle, 
                                                                          dataset=dataset, 
@@ -473,7 +473,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
                              password=password, 
                              high_performance_cores=False)
 #------------------------------------------------------------------------------------------------------
-    if papi and benchmark == "Polybench-multithreaded":
+    if papi and benchmark == "Polybench-pluto-openmp":
         suffix = suffix + "_multithreaded"
         print("Capturing papi data")
         # Run the experiments
@@ -485,7 +485,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         papi_output_dir = kernel_data_dir
         build_dir_papi = os.path.join(build_dir, "papi")
         os.makedirs(build_dir_papi, exist_ok=True)
-        default_verbose_polybench = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_mem_fencing_parallel")
+        default_verbose_polybench = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_pluto_openmp")
         
         if machine == "raptorlake":
             configure_polybench(kernel_dir=kernel_dir, 
