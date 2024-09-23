@@ -10,3 +10,6 @@
 [submodule "kernels/PolyBenchC-4.2.1"]
 	path = kernels/PolyBenchC-4.2.1
 	url = https://github.com/mvvsmk/PolyBenchC-4.2.1.git
+[submodule "kernels/PolyBenchC-4.2.1_pluto_openmp"]
+	path = kernels/PolyBenchC-4.2.1_pluto_openmp
+	url = https://github.com/mvvsmk/PolyBenchC-4.2.1.git
