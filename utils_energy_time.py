@@ -3,9 +3,12 @@ import pandas as pd
 import time
 from utils_power import run_with_energy_thread, set_power_cap, make_session_set_powercap, make_session_reset_powercap
 
-def run_kernels_energy_and_time(file_to_run,password,machine):
-    command = f"echo {password} | sudo -S taskset -c 0 {file_to_run}"
-    reading = run_with_energy_thread(command,password,machine)
+def run_kernels_energy_and_time(file_to_run,password,machine,is_multicore=False):
+    if is_multicore:
+        command = f"echo {password} | sudo -S {file_to_run}"
+    else:
+        command = f"echo {password} | sudo -S taskset -c 0 {file_to_run}"
+    reading = run_with_energy_thread(command,password,machine,is_multicore)
     print(f"Ran {file_to_run}")
     time_reading = reading["Time Reading"]            
     energy_reading = reading["Energy Reading"]
@@ -18,7 +21,7 @@ def run_kernels_energy_and_time(file_to_run,password,machine):
     
     return energy_reading, time_reading
     
-def oracle_collect_kernels_energy_and_time(build_dir, output_dir, machine, num_itr, suffix, password, sleep) :
+def oracle_collect_kernels_energy_and_time(build_dir, output_dir, machine, num_itr, suffix, password, sleep, is_multicore=False) :
     data ={
         "Name" : [],
         "Energy(J)" : [],
@@ -49,7 +52,7 @@ def oracle_collect_kernels_energy_and_time(build_dir, output_dir, machine, num_i
             time.sleep(sleep)
             energy_r, time_r = run_kernels_energy_and_time(file_to_run=binary_file,
                                                                  password=password,
-                                                                 machine=machine)
+                                                                 machine=machine,is_multicore=is_multicore)
             data["Name"].append(file)
             data["Energy(J)"].append(energy_r)
             data["Time(s)"].append(time_r)
@@ -67,7 +70,7 @@ def oracle_collect_kernels_energy_and_time(build_dir, output_dir, machine, num_i
             
 def powercap_collect_kernels_energy_and_time(build_dir, output_dir,
                                                        machine, num_itr, suffix,
-                                                       password, sleep,powercap_file) :
+                                                       password, sleep,powercap_file,is_multicore=False) :
     data ={
         "Name" : [],
         "Power Cap(W)" : [],
@@ -131,7 +134,7 @@ def powercap_collect_kernels_energy_and_time(build_dir, output_dir,
             time.sleep(sleep)
             energy_r, time_r = run_kernels_energy_and_time(file_to_run=binary_file,
                                                                  password=password,
-                                                                 machine=machine)
+                                                                 machine=machine,is_multicore=is_multicore)
             data["Name"].append(file)
             data["Energy(J)"].append(energy_r)
             data["Time(s)"].append(time_r)

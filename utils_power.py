@@ -10,11 +10,14 @@ from utils_corefreq import *
 rapl_energy_max = 2**32 - 1
 stop_event = threading.Event()
 
-def counter_thread(count,sudo_password,machine):
+def counter_thread(count,sudo_password,machine,is_multicore=False):
     print("energy overflow thread running")
     pid = os.getpid()
     p = psutil.Process(pid)
-    p.cpu_affinity([4])
+    if is_multicore:
+        p.cpu_affinity([4])
+    else:
+        p.cpu_affinity([0])
     energy_msr = 1553
     command_to_read_energy = f"sudo -S rdmsr -u {energy_msr}"
     if machine == "zen3" :
@@ -73,13 +76,13 @@ def get_power_caps_list(file_path):
         print(f"Error in reading the power caps file: {e}")
         exit(1)
         
-def run_with_energy_thread(command : str, password : str, machine : str) -> dict:
+def run_with_energy_thread(command : str, password : str, machine : str, is_multicore : bool = False) -> dict:
     file_ran = False
     energy_overflows = [-1]
     if stop_event.is_set():
         stop_event.clear()
     time.sleep(10)
-    counter_overflows = threading.Thread(target=counter_thread, args=(energy_overflows,password,machine))
+    counter_overflows = threading.Thread(target=counter_thread, args=(energy_overflows,password,machine,is_multicore))
     counter_overflows.start()
     try :
         output = subprocess.run(command, shell=True, check=True,

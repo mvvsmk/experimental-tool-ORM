@@ -5,7 +5,7 @@ import pandas as pd
 from utils_state import save_state
 
 # Function to run all the polybench kernels and collect the output
-def run_kernels_papi(build_dir, output_dir,num_iterations, suffix, sleep, password, high_performance_cores):
+def run_kernels_papi(build_dir, output_dir,num_iterations, suffix, sleep, password, high_performance_cores,is_multicore = False):
 
     data = {
         "Name": [],
@@ -30,11 +30,17 @@ def run_kernels_papi(build_dir, output_dir,num_iterations, suffix, sleep, passwo
         # Run the binary file
         # run_command = f"{binary_file_path} {num_iterations} > {output_file_path}"
         run_command = ""
-        if not high_performance_cores:
-            run_command = f"sudo -S taskset -c 0 {binary_file_path}"
-        else :
-            run_command = f"sudo -S LIBPFM_FORCE_PMU=adl_glc taskset -c 0 {binary_file_path}"
-        
+        if not is_multicore:        
+            if not high_performance_cores:
+                run_command = f"sudo -S taskset -c 0 {binary_file_path}"
+            else :
+                run_command = f"sudo -S LIBPFM_FORCE_PMU=adl_glc taskset -c 0 {binary_file_path}"
+        else:
+            if not high_performance_cores:
+                run_command = f"sudo -S  {binary_file_path}"
+            else :
+                run_command = f"sudo -S LIBPFM_FORCE_PMU=adl_glc {binary_file_path}"
+            
         if data['Name'] and file in data['Name'] and data['Name'].count(file) >= num_iterations:
             print(f"Skipping {file_name_without_extension}")
             continue
@@ -46,10 +52,13 @@ def run_kernels_papi(build_dir, output_dir,num_iterations, suffix, sleep, passwo
                                     check=True,capture_output=True,
                                     input=password.encode('utf-8'))
 
+            print(output)
             print(f"Ran {file_name_without_extension}")
             list_of_measurements = output.stdout.decode('utf-8').splitlines()[0].split()
             data['Name'].append(os.path.basename(file))
+            print(list_of_measurements)
             for i in range(len(list_of_measurements)):
+                print(list_of_measurements[i])
                 value = int(list_of_measurements[i].split('=')[1])
                 key = list_of_measurements[i].split('=')[0]
                 # check if key is already present in the dictionary

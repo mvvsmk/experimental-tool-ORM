@@ -50,7 +50,7 @@ def parse_args():
     parser.add_argument("--suffix", type=str, default=f"", help="Suffix for the experiment directory")
     parser.add_argument("--password", type=str, required=True, help="Password for sudo")
     parser.add_argument("--inst_type", type=str, required=True, help="oracle, oracle+powercap, powercap, papi")
-    parser.add_argument("--benchmarks", type=str, required=True, help="MLIR, Polybench")
+    parser.add_argument("--benchmarks", type=str, required=True, help="MLIR, Polybench, Polybench-tiled, Polybench-multithreaded")
     parser.add_argument("--itr", type=int, default=1, help="Number of iterations to run the experiments")
     parser.add_argument("--freq_change", type=bool, default=False, help="Change the frequency")
     parser.add_argument('-e','--exp_conditions',
@@ -58,7 +58,7 @@ def parse_args():
                         help='what are the experimenatal setup\n g_userspace \n no_prefetcher \n no_turbo', 
                         required=False)
     args = parser.parse_args()
-    args.suffix = args.suffix + formatted_datetime + "_"+ args.machine + "_"+ args.inst_type + "_"+ args.benchmarks + "_"+ args.dataset + "_"+ args.data_type + "_"+ str(args.itr) + "_"+ get_active_governor(password=args.password)
+    args.suffix = args.suffix + formatted_datetime
     return args
 
 def main():
@@ -190,7 +190,39 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         oracle_collect_kernels_energy_and_time(build_dir=build_dir_oracle_polybench, output_dir=oracle_output_dir,
                                                machine=machine, num_itr=itr,
                                                suffix=suffix, password=password, sleep=10)
-    
+
+    if oracle and benchmark == "Polybench-tiled":
+        print("Capturing oracle data")
+        # Run the experiments
+        oracle_output_dir = setup_oracle_dir_structure(tools_dir=os.curdir, machine_name=machine, suffix=suffix)
+        build_dir_oracle = os.path.join(build_dir, "oracle")
+        os.makedirs(build_dir_oracle, exist_ok=True)
+        mem_fencing_src = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_mem_fencing_tiled")
+        build_dir_oracle_polybench = build_polybench_kernels_energy_time(src_dir=mem_fencing_src, 
+                                                                         build_dir=build_dir_oracle, 
+                                                                         dataset=dataset, 
+                                                                         data_type=data_type)
+        
+        oracle_collect_kernels_energy_and_time(build_dir=build_dir_oracle_polybench, output_dir=oracle_output_dir,
+                                               machine=machine, num_itr=itr,
+                                               suffix=suffix, password=password, sleep=10)    
+
+    if oracle and benchmark == "Polybench-multithreaded":
+        print("Capturing oracle data")
+        # Run the experiments
+        oracle_output_dir = setup_oracle_dir_structure(tools_dir=os.curdir, machine_name=machine, suffix=suffix)
+        build_dir_oracle = os.path.join(build_dir, "oracle")
+        os.makedirs(build_dir_oracle, exist_ok=True)
+        mem_fencing_src = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_mem_fencing_parallel")
+        build_dir_oracle_polybench = build_polybench_kernels_energy_time_parallel(src_dir=mem_fencing_src, 
+                                                                         build_dir=build_dir_oracle, 
+                                                                         dataset=dataset, 
+                                                                         data_type=data_type,additional_flags="-fopenmp")
+        
+        oracle_collect_kernels_energy_and_time(build_dir=build_dir_oracle_polybench, output_dir=oracle_output_dir,
+                                               machine=machine, num_itr=itr,
+                                               suffix=suffix, password=password, sleep=10,is_multicore=True)
+            
     if powercap and benchmark == "Polybench":
         print("Capturing powercap data")
         # Run the experiments
@@ -326,7 +358,236 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
                              suffix=suffix, sleep=10, 
                              password=password, 
                              high_performance_cores=False)
-    
+
+    if papi and benchmark == "Polybench-tiled":
+        print("Capturing papi data")
+        # Run the experiments
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+                                                                                                  machine_name=machine, 
+                                                                                                  suffix=suffix,
+                                                                                                  KernelFolder=True)
+        
+        papi_output_dir = kernel_data_dir
+        build_dir_papi = os.path.join(build_dir, "papi")
+        os.makedirs(build_dir_papi, exist_ok=True)
+        default_verbose_polybench = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_memfencing_tiled")
+        
+        if machine == "raptorlake":
+            configure_polybench(kernel_dir=kernel_dir, 
+                                src_dir=default_verbose_polybench, 
+                                machine=machine, 
+                                file="papi_counters_raptorlake_flop.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
+                                                                    build_dir=build_dir_papi, 
+                                                                    dataset=dataset, 
+                                                                    data_type=data_type)
+            
+            glc = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_glc", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=True)
+            
+            configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, 
+                                machine=machine, file="papi_counters_raptorlake_mem.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
+                                                        build_dir=build_dir_papi, 
+                                                        dataset=dataset, 
+                                                        data_type=data_type)
+            
+            perf = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_perf", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=False)
+            
+            #{"dataframe":df,"output_file":csv_name}
+            glc_df = glc["dataframe"]
+            glc_output_file = glc["output_file"]
+            perf_df = perf["dataframe"]
+            perf_output_file = perf["output_file"]
+            merged_df = pd.merge(glc_df, perf_df, on="Name")
+            merged_output_file = os.path.join(papi_output_dir, f"kernel_data_PolyBenchC-4.2.1_tiled_32_{suffix}_merged.csv")
+            merged_df.to_csv(merged_output_file, index=False)
+            print(f"Saved merged data to {merged_output_file}")
+        
+        elif machine == "zen3":
+            configure_polybench(kernel_dir=kernel_dir, 
+                                src_dir=default_verbose_polybench, 
+                                machine=machine, 
+                                file="papi_counters_zen3_flop.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
+                                                                    build_dir=build_dir_papi, 
+                                                                    dataset=dataset, 
+                                                                    data_type=data_type)
+            
+            glc = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_flop", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=True)
+            
+            configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, 
+                                machine=machine, file="papi_counters_zen3_mem.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
+                                                        build_dir=build_dir_papi, 
+                                                        dataset=dataset, 
+                                                        data_type=data_type)
+            
+            perf = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_mem", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=False)
+            
+            #{"dataframe":df,"output_file":csv_name}
+            glc_df = glc["dataframe"]
+            glc_output_file = glc["output_file"]
+            perf_df = perf["dataframe"]
+            perf_output_file = perf["output_file"]
+            merged_df = pd.merge(glc_df, perf_df, on="Name")
+            merged_output_file = os.path.join(papi_output_dir, f"kernel_data_PolyBenchC-4.2.1_tiled_32_{suffix}_merged.csv")
+            merged_df.to_csv(merged_output_file, index=False)
+            print(f"Saved merged data to {merged_output_file}")
+            
+        else:
+            configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, machine=machine)
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi(src_dir=default_verbose_polybench, 
+                                                                    build_dir=build_dir_papi, 
+                                                                    dataset=dataset, 
+                                                                    data_type=data_type)
+            
+            run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                             output_dir=papi_output_dir, 
+                             num_iterations=itr, 
+                             suffix=suffix, sleep=10, 
+                             password=password, 
+                             high_performance_cores=False)
+#------------------------------------------------------------------------------------------------------
+    if papi and benchmark == "Polybench-multithreaded":
+        suffix = suffix + "_multithreaded"
+        print("Capturing papi data")
+        # Run the experiments
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+                                                                                                  machine_name=machine, 
+                                                                                                  suffix=suffix,
+                                                                                                  KernelFolder=True)
+        
+        papi_output_dir = kernel_data_dir
+        build_dir_papi = os.path.join(build_dir, "papi")
+        os.makedirs(build_dir_papi, exist_ok=True)
+        default_verbose_polybench = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_mem_fencing_parallel")
+        
+        if machine == "raptorlake":
+            configure_polybench(kernel_dir=kernel_dir, 
+                                src_dir=default_verbose_polybench, 
+                                machine=machine, 
+                                file="papi_counters_raptorlake_flop.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi_multithreaded(src_dir=default_verbose_polybench, 
+                                                                    build_dir=build_dir_papi, 
+                                                                    dataset=dataset, 
+                                                                    data_type=data_type,additional_flags="-fopenmp")
+            
+            glc = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_glc", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=True,is_multicore=True)
+            
+            configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, 
+                                machine=machine, file="papi_counters_raptorlake_mem.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi_multithreaded(src_dir=default_verbose_polybench, 
+                                                        build_dir=build_dir_papi, 
+                                                        dataset=dataset, 
+                                                        data_type=data_type,additional_flags="-fopenmp")
+            
+            perf = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_perf", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=False,is_multicore=True)
+            
+            #{"dataframe":df,"output_file":csv_name}
+            glc_df = glc["dataframe"]
+            glc_output_file = glc["output_file"]
+            perf_df = perf["dataframe"]
+            perf_output_file = perf["output_file"]
+            merged_df = pd.merge(glc_df, perf_df, on="Name")
+            merged_output_file = os.path.join(papi_output_dir, f"kernel_data_PolyBenchC-4.2.1_{suffix}_merged.csv")
+            merged_df.to_csv(merged_output_file, index=False)
+            print(f"Saved merged data to {merged_output_file}")
+        
+        elif machine == "zen3":
+            configure_polybench(kernel_dir=kernel_dir, 
+                                src_dir=default_verbose_polybench, 
+                                machine=machine, 
+                                file="papi_counters_zen3_flop.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi_multithreaded(src_dir=default_verbose_polybench, 
+                                                                    build_dir=build_dir_papi, 
+                                                                    dataset=dataset, 
+                                                                    data_type=data_type,additional_flags="-fopenmp")
+            
+            glc = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_flop", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=True,is_multicore=True)
+            
+            configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, 
+                                machine=machine, file="papi_counters_zen3_mem.list")
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi_multithreaded(src_dir=default_verbose_polybench, 
+                                                        build_dir=build_dir_papi, 
+                                                        dataset=dataset, 
+                                                        data_type=data_type,additional_flags="-fopenmp")
+            
+            perf = run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                                    output_dir=papi_output_dir, 
+                                    num_iterations=itr, 
+                                    suffix=suffix + "_mem", sleep=10, 
+                                    password=password, 
+                                    high_performance_cores=False,is_multicore=True)
+            
+            #{"dataframe":df,"output_file":csv_name}
+            glc_df = glc["dataframe"]
+            glc_output_file = glc["output_file"]
+            perf_df = perf["dataframe"]
+            perf_output_file = perf["output_file"]
+            merged_df = pd.merge(glc_df, perf_df, on="Name")
+            merged_output_file = os.path.join(papi_output_dir, f"kernel_data_PolyBenchC-4.2.1_{suffix}_merged.csv")
+            merged_df.to_csv(merged_output_file, index=False)
+            print(f"Saved merged data to {merged_output_file}")
+            
+        else:
+            configure_polybench(kernel_dir=kernel_dir, src_dir=default_verbose_polybench, machine=machine)
+            
+            build_dir_papi_polybench = build_polybench_kernels_papi_multithreaded(src_dir=default_verbose_polybench, 
+                                                                    build_dir=build_dir_papi, 
+                                                                    dataset=dataset, 
+                                                                    data_type=data_type,additional_flags="-fopenmp")
+            
+            run_kernels_papi(build_dir=build_dir_papi_polybench, 
+                             output_dir=papi_output_dir, 
+                             num_iterations=itr, 
+                             suffix=suffix, sleep=10, 
+                             password=password, 
+                             high_performance_cores=False, is_multicore=True)
+
     if oracle and benchmark == "MLIR":
         print("Capturing oracle data")
         # Run the experiments
