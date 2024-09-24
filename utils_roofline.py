@@ -498,7 +498,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                                         constant_power,
                                         core,
                                         itr=11,
-                                        caches = ['L1D' , 'L2' , 'L3', 'DRAM']) -> None:
+                                        caches = ['L1D' , 'L2' , 'L3', 'DRAM'],uncore_freq = 0) -> None:
 
     if os.path.exists(build_dir):
         shutil.rmtree(build_dir)
@@ -683,8 +683,11 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                     # if is_Fma_only:
                     #     total_missed_bytes = 0
                     #     OI = float('inf')
+                    if core:
+                        data2["Frequency(kHz)"].append(freq)
+                    else:
+                        data2["Frequency(kHz)"].append(uncore_freq)
                     
-                    data2["Frequency(kHz)"].append(freq)
                     data2["Execution Time(s)"].append(execution_time)
                     data2["Energy(J)"].append(Energy)
                     data2["Power(W)"].append(Power)
@@ -873,7 +876,7 @@ if __name__ == "__main__":
         get_energy_roofline_time_benchmarks(sudo_password=sudo_password,build_dir=build_dir,source_dir=source_dir,output_dir=output_dir_freq,
                                             suffix=freq_suff,zzz=zzz,frequency=freq_run,energy_mul=get_energy_multiplication_factor(args.machine),
                                             high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,
-                                            caches=caches,core=core)
+                                            caches=caches,core=core,uncore_freq=freq)
         plot_muliple_roofline(result_folder=output_dir_freq,output_folder=output_dir_freq,machine=machine)
         # exit()
         state["list ran"].append(freq)
@@ -883,8 +886,9 @@ if __name__ == "__main__":
     #get date and time
     current_datetime = datetime.datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
-    curve_const = get_curve_constants(output_dir=output_dir, caches=caches)
-    curve_const.to_csv(os.path.join(output_dir,f"curve_constants_for_{machine}_{formatted_datetime}"),index=False)
+    curve_const = get_curve_constants(folder_name=output_dir, caches=caches)
+    curve_const.to_csv(os.path.join(output_dir,f"curve_constants_for_{machine}_{formatted_datetime}.csv"),index=False)
+    exit()
     os.remove('energy_validation_state.json')
     print("State file deleted successfully.")
     print("=============================================================================")

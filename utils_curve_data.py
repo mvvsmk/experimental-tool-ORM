@@ -121,7 +121,7 @@ def create_mega_csv(base_folder="/home/achilles/code/experimental-tool-ORM/plott
     # balance_df.to_csv("balance.csv", index=False)
     # exit(0)
 
-    # mega_df.to_csv("mega.csv", index=False)
+    mega_df.to_csv("mega.csv", index=False)
     # print(f"Successfully created the mega CSV file at: {output_file}")
     print("combinded data frame created")
     return mega_df, balance_df

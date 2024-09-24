@@ -44,8 +44,6 @@ def get_curve_fit_equations(data, parameter,plot = False):
     # Calculate performance: total_flops / execution time
 
     # time.sleep(5)
-    print(data)
-    
     # Extract frequency and performance
     x = data['Frequency(kHz)'].values
     # y = data['Performance'].values
@@ -207,7 +205,10 @@ def get_curve_constants(folder_name,plot = False,caches = ["L1D","L2","L3","DRAM
     for param in ["Time Balance","Energy Balance"]:
         print(param)
         for cache in caches:
+            print(indivisual_cache_balance[cache])
+            const_data_balance[param] = {}
             const_data_balance[param][cache] = get_curve_fit_equations(indivisual_cache_balance[cache],param)
+            # get_curve_fit_equations(indivisual_cache_balance[cache],param)
         # const_data_balance[param] = {
         #     # "L1D" : get_curve_fit_equations(l1d_balance,param),
         #     # "L2" : get_curve_fit_equations(l2_balance,param),
@@ -228,6 +229,7 @@ def get_curve_constants(folder_name,plot = False,caches = ["L1D","L2","L3","DRAM
     const_data_bytes = {}
     for param in list_of_flop_params:
         for cache in caches:
+            const_data_flop[param] = {}
             const_data_flop[param][cache] = get_curve_fit_equations(indivisual_cache_flop[cache],param)
         # print(param)
         # const_data_flop[param] = {
@@ -249,6 +251,7 @@ def get_curve_constants(folder_name,plot = False,caches = ["L1D","L2","L3","DRAM
     
     for param in list_of_bytes_params:
         for cache in caches:
+            const_data_bytes[param] = {}
             const_data_bytes[param][cache] = get_curve_fit_equations(indivisual_cache_bytes[cache],param)
         # const_data_bytes[param] = {
         #     # "L1D" : get_curve_fit_equations(l1d_bytes,param),
