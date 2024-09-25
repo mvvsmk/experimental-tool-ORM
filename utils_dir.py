@@ -98,13 +98,13 @@ def setup_oracle_dir_structure(tools_dir : str, machine_name : str,suffix : str)
 
     return results_dir
 
-def setup_dir_structure_with_powerCap(tools_dir : str, machine_name : str,suffix : str,
+def setup_dir_structure_with_Predictions(tools_dir : str, machine_name : str,suffix : str,
                                       KernelFolder : bool = True, RooflineFolder : bool = True,
-                                      PowerCapFolder : bool = True) -> tuple[str, str]:
+                                      PredictionFolder : bool = True) -> tuple[str, str]:
     
     kernel_data_dir = ""
     roofline_data_dir = ""
-    powercap_data_dir = ""
+    prediction_data_dir = ""
     
     # Create the results directory if it doesn't exist
     # results_dir = f'{tools_dir}/results'
@@ -149,13 +149,13 @@ def setup_dir_structure_with_powerCap(tools_dir : str, machine_name : str,suffix
         else:
             print(f"Roofline Data directory {roofline_data_dir} already exists.")
 
-    if PowerCapFolder:
+    if PredictionFolder:
         # Create the PowerCap_Pridiction directory if it doesn't exist
-        powercap_data_dir = os.path.join(current_experiment_dir, "PowerCap_Pridiction")
-        if not os.path.exists(powercap_data_dir):
-            os.makedirs(powercap_data_dir)
-            print(f"PowerCap_Pridiction directory {powercap_data_dir} created successfully.")
+        prediction_data_dir = os.path.join(current_experiment_dir, "Pridiction")
+        if not os.path.exists(prediction_data_dir):
+            os.makedirs(prediction_data_dir)
+            print(f"PowerCap_Pridiction directory {prediction_data_dir} created successfully.")
         else:
-            print(f"PowerCap_Pridiction directory {powercap_data_dir} already exists.")
+            print(f"PowerCap_Pridiction directory {prediction_data_dir} already exists.")
 
-    return kernel_data_dir, roofline_data_dir, powercap_data_dir
+    return kernel_data_dir, roofline_data_dir, prediction_data_dir
