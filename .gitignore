@@ -6,3 +6,6 @@ energy_roofline_bin*
 state.json
 mlir_models/mlir/*
 .vscode*
+# ignore vim swap files
+*.swp
+*.swo
