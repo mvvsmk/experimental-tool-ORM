@@ -232,8 +232,8 @@ def set_frequency(sudo_password,frequency) -> None:
     """
     try:
         # subprocess.call(f"sudo sh -c 'echo {frequency} > /sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed'",shell=True)
-        subprocess.run([f"sudo -S LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-set -d {frequency}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
-        subprocess.run([f"sudo -S LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-set -u {frequency}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([f"echo {frequency} | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([f"echo {frequency} | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq"],input=sudo_password.encode('utf-8'),shell=True,check=True)
         print(f"Frequency set to {frequency}")
     except subprocess.CalledProcessError as e:
         print(f"Error setting frequency to {frequency}: {e}")
