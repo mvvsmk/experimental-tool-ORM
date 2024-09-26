@@ -43,13 +43,14 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Script to run the experiments")
     parser.add_argument("--machine", type=str, required=True, help="Machine name")
     parser.add_argument("--powercap_file", type=str, help="File containing list of power caps")
+    parser.add_argument("--core_uncore_csv", type=str, help="File containing list of core_uncore frequencies")
     parser.add_argument("--kernel_dir", type=str, default="./kernels", help="Directory containing the kernel files")
     parser.add_argument("--build_dir", type=str, required=True, help="Directory to store the build files")
     parser.add_argument("--dataset", type=str, default="EXTRALARGE_DATASET", help="Dataset to run the experiments")
     parser.add_argument("--data_type", type=str, default="DATA_TYPE_IS_DOUBLE", help="Data type to run the experiments")
     parser.add_argument("--suffix", type=str, default=f"", help="Suffix for the experiment directory")
     parser.add_argument("--password", type=str, required=True, help="Password for sudo")
-    parser.add_argument("--inst_type", type=str, required=True, help="oracle, oracle+powercap, powercap, papi")
+    parser.add_argument("--inst_type", type=str, required=True, help="oracle, oracle+powercap, powercap, papi, core_uncore")
     parser.add_argument("--benchmarks", type=str, required=True, help="MLIR, Polybench, Polybench-tiled, Polybench-pluto-openmp")
     parser.add_argument("--itr", type=int, default=1, help="Number of iterations to run the experiments")
     parser.add_argument("--freq_change", type=bool, default=False, help="Change the frequency")
@@ -66,6 +67,7 @@ def main():
     # convert all args namespace to variables
     machine = args.machine
     powercap_file = args.powercap_file
+    core_uncore_csv = args.core_uncore_csv
     kernel_dir = args.kernel_dir
     build_dir = args.build_dir
     dataset = args.dataset
@@ -78,6 +80,7 @@ def main():
     oracle = False
     powercap = False
     papi = False
+    core_uncore = False
     benchmark = args.benchmarks
     exp_conditions = args.exp_conditions
     frequencies_run = []
@@ -88,6 +91,7 @@ def main():
         load_state(state=state,file="state.json")
         machine = state["machine"]
         powercap_file = state["powercap_file"]
+        core_uncore_csv = state["core_uncore_csv"]
         kernel_dir = state["kernel_dir"]
         build_dir = state["build_dir"]
         dataset = state["dataset"]
@@ -108,6 +112,7 @@ def main():
         state = {
             "machine":machine,
             "powercap_file":powercap_file,
+            "core_uncore_csv":core_uncore_csv,
             "kernel_dir":kernel_dir,
             "build_dir":build_dir,
             "dataset":dataset,
@@ -131,6 +136,8 @@ def main():
     build_dir = os.path.abspath(build_dir)
     if powercap_file:
         powercap_file = os.path.abspath(powercap_file)
+    if core_uncore_csv:
+        core_uncore_csv = os.path.abspath(core_uncore_csv)
     
     if not os.path.exists(build_dir):
         os.makedirs(build_dir)
@@ -144,6 +151,8 @@ def main():
         powercap = True
     elif inst_type == "papi":
         papi = True
+    elif inst_type == "core_uncore":
+        core_uncore = True
     else:
         print("Invalid inst_type")
         exit(1)
@@ -157,7 +166,7 @@ def main():
     
     
     if not freq_change:
-        exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, benchmark)
+        exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, core_uncore, benchmark)
     else:
         available_frequencies = get_available_frequencies(machine, password)
         available_frequencies = sorted(available_frequencies, reverse=True)
@@ -166,14 +175,14 @@ def main():
                 print(f"Skipping frequency {freq}")
                 continue
             set_frequency(freq, machine, password)
-            exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suffix + f"_{freq}", password, itr, oracle, powercap, papi, benchmark)
+            exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset, data_type, suffix + f"_{freq}", password, itr, oracle, powercap, papi,core_uncore, benchmark)
             frequencies_run.append(freq)
             save_state(state=state,file="state.json")
     # remove the state file
     os.remove("state.json")
 
  
-def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, benchmark):
+def exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, core_uncore, benchmark):
     # First let's capture oracle data
     if oracle and benchmark == "Polybench":
         print("Capturing oracle data")
@@ -226,7 +235,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
     if powercap and benchmark == "Polybench":
         print("Capturing powercap data")
         # Run the experiments
-        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir, 
                                                                                                   machine_name=machine, 
                                                                                                   suffix=suffix,
                                                                                                   PowerCapFolder=True)
@@ -248,7 +257,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
     if papi and benchmark == "Polybench":
         print("Capturing papi data")
         # Run the experiments
-        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir, 
                                                                                                   machine_name=machine, 
                                                                                                   suffix=suffix,
                                                                                                   KernelFolder=True)
@@ -362,7 +371,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
     if papi and benchmark == "Polybench-tiled":
         print("Capturing papi data")
         # Run the experiments
-        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir, 
                                                                                                   machine_name=machine, 
                                                                                                   suffix=suffix,
                                                                                                   KernelFolder=True)
@@ -477,7 +486,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
         suffix = suffix + "_multithreaded"
         print("Capturing papi data")
         # Run the experiments
-        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir, 
                                                                                                   machine_name=machine, 
                                                                                                   suffix=suffix,
                                                                                                   KernelFolder=True)
@@ -608,7 +617,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
     if powercap and benchmark == "MLIR":
         print("Capturing powercap data")
         # Run the experiments
-        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir, 
                                                                                                   machine_name=machine, 
                                                                                                   suffix=suffix + "_mlir",
                                                                                                   PowerCapFolder=True)
@@ -628,7 +637,7 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
     if papi and benchmark == "MLIR":
         print("Capturing papi data")
         # Run the experiments
-        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_powerCap(tools_dir=os.curdir, 
+        kernel_data_dir, roofline_data_dir, powercap_data_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir, 
                                                                                                   machine_name=machine, 
                                                                                                   suffix=suffix + "_mlir",
                                                                                                   KernelFolder=True)
@@ -671,6 +680,26 @@ def exec(machine, powercap_file, kernel_dir, build_dir, dataset, data_type, suff
                           sudo_password=password, 
                         #   sleep=10
                           )
-    
+    if core_uncore and benchmark == "Polybench":
+        print("Capturing core_uncore data!")
+        # Run the experiments
+        _, _, core_uncore_output_dir = setup_dir_structure_with_predictions(tools_dir=os.curdir,
+                                                                      machine_name=machine, 
+                                                                      suffix=suffix, KernelFolder=False,
+                                                                      RooflineFolder=False,
+                                                                      PredictionFolder=True)
+        build_dir_core_uncore = os.path.join(build_dir, "core_uncore")
+        os.makedirs(build_dir_core_uncore, exist_ok=True)
+        mem_fencing_src = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_mem_fencing")
+        
+        build_dir_powercap_polybench = build_polybench_kernels_energy_time(src_dir=mem_fencing_src, 
+                                                                           build_dir=build_dir_core_uncore,
+                                                                           dataset=dataset,
+                                                                           data_type=data_type)
+
+        core_uncore_collect_kernels_energy_and_time(build_dir=build_dir_powercap_polybench, 
+                                                 output_dir=core_uncore_output_dir,
+                                                 machine=machine, num_itr=itr,
+                                                 suffix=suffix, password=password, sleep=10, core_uncore_csv=core_uncore_csv)
 if __name__ == "__main__":
     main()

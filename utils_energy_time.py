@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import time
+from utils_freq import reset_frequency, reset_uncore_freq_intel, set_frequency, set_max_uncore_freq_intel
 from utils_power import run_with_energy_thread, set_power_cap, make_session_set_powercap, make_session_reset_powercap
 
 def run_kernels_energy_and_time(file_to_run,password,machine,is_multicore=False):
@@ -143,6 +144,74 @@ def powercap_collect_kernels_energy_and_time(build_dir, output_dir,
             df = pd.DataFrame(data)
             df.to_csv(output_csv, index=False)
             
+    print(f"Saved {output_csv}")
+    # Calculate the median and group by the name
+    df = pd.read_csv(output_csv)
+    df_median = df.groupby("Name").median().reset_index()
+    df_median.to_csv(output_csv_median, index=False)
+    print(f"Saved {output_csv_median}")
+    return output_csv, output_csv_median
+
+def core_uncore_collect_kernels_energy_and_time(build_dir, output_dir, 
+                                             machine, num_itr, suffix, 
+                                             password, sleep,core_uncore_csv,
+                                             is_multicore=False) :
+    # ensure output_dir are made
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # create output csv files path
+    output_csv = os.path.join(output_dir, f"core_uncore_polybench_{machine}_{suffix}.csv")
+    output_csv_median = os.path.join(output_dir, f"core_uncore_polybench_{machine}_{suffix}_median.csv")
+
+    # set data from csv file if it already exists
+    data ={
+        "Name" : [],
+        "CoreFreq" : [],
+        "UncoreFreq" : [],
+        "Energy(J)" : [],
+        "Time(s)" : []
+    }
+    if os.path.exists(output_csv):
+        df_prev = pd.read_csv(output_csv)
+        data = {
+            "Name" : df_prev["Name"].values.tolist(),
+            "CoreFreq" : df_prev["CoreFreq"].values.tolist(),
+            "UncoreFreq" : df_prev["UncoreFreq"].values.tolist(),
+            "Energy(J)" : df_prev["Energy(J)"].values.tolist(),
+            "Time(s)" : df_prev["Time(s)"].values.tolist()
+        }
+    # run all executables inside the build directory
+    for _i, executable in enumerate(os.listdir(build_dir)):
+        run_itr = num_itr
+        if executable in data["Name"]:
+            run_itr = num_itr - len(data["Name"])
+
+        # read core and uncore frequecies from the csv file
+        dataframe_core_uncore = pd.read_csv(core_uncore_csv, index_col=0)
+        # set core frequency
+        core_freq = dataframe_core_uncore.loc[executable]['CoreFreq']
+        set_frequency(sudo_password=password, frequency=core_freq)
+        # set uncore frequency
+        uncore_freq = dataframe_core_uncore.loc[executable]['UncoreFreq']
+        set_max_uncore_freq_intel(frequency=uncore_freq,password=password)
+        for j in range(run_itr):
+            binary_file = os.path.join(build_dir, executable)
+            time.sleep(sleep)
+            energy_r, time_r = run_kernels_energy_and_time(file_to_run=binary_file,
+                                                                 password=password,
+                                                                 machine=machine,is_multicore=is_multicore)
+            data["Name"].append(executable)
+            data["CoreFreq"].append(core_freq)
+            data["UncoreFreq"].append(uncore_freq)
+            data["Energy(J)"].append(energy_r)
+            data["Time(s)"].append(time_r)
+            print(f"Ran {executable} {j+1} times")
+            df = pd.DataFrame(data)
+            df.to_csv(output_csv, index=False)
+    #reset core and uncore frequecies
+    reset_frequency(sudo_password=password)
+    reset_uncore_freq_intel(password=password)
+
     print(f"Saved {output_csv}")
     # Calculate the median and group by the name
     df = pd.read_csv(output_csv)

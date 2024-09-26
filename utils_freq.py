@@ -28,6 +28,28 @@ def set_uncore_freq_intel(frequency,password) -> None:
     except subprocess.CalledProcessError as e:
         print(f"Error setting uncore frequency to {frequency}: {e}")
 
+def set_max_uncore_freq_intel(frequency,password) -> None:
+    command1 = f"echo '{frequency}'  | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
+    try:
+        subprocess.run([command1],input=password.encode('utf-8'),shell=True,check=True)
+        print(f"Max uncore Frequency set to {frequency}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error setting max uncore frequency to {frequency}: {e}")
+
+"""
+Use `initial_max_freq_khz` and `initial_min_freq_khz` to reset uncore frequecies
+to default values
+"""
+def reset_uncore_freq_intel(password) -> None:
+    command1 = f"cat /sys/devices/system/cpu/intel_uncore_frequency/initial_max_freq_khz | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
+    command2 = f"cat /sys/devices/system/cpu/intel_uncore_frequency/initial_min_freq_khz | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
+    try:
+        subprocess.run([command1],input=password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([command2],input=password.encode('utf-8'),shell=True,check=True)
+        print(f"Uncore Frequency set to default")
+    except subprocess.CalledProcessError as e:
+        print(f"Error setting uncore frequency to default: {e}")
+
 def convert_frequency(frequencies) -> list[int]:
     converted_frequencies = []
     for freq in frequencies:
