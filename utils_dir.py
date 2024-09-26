@@ -98,9 +98,9 @@ def setup_oracle_dir_structure(tools_dir : str, machine_name : str,suffix : str)
 
     return results_dir
 
-def setup_dir_structure_with_Predictions(tools_dir : str, machine_name : str,suffix : str,
+def setup_dir_structure_with_predictions(tools_dir : str, machine_name : str,suffix : str,
                                       KernelFolder : bool = True, RooflineFolder : bool = True,
-                                      PredictionFolder : bool = True) -> tuple[str, str]:
+                                      PredictionFolder : bool = True) -> tuple[str, str, str]:
     
     kernel_data_dir = ""
     roofline_data_dir = ""
