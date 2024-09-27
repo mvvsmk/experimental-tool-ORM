@@ -743,5 +743,26 @@ def exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset
                                                  output_dir=core_uncore_output_dir,
                                                  machine=machine, num_itr=itr,
                                                  suffix=suffix, password=password, sleep=10, core_uncore_csv=core_uncore_csv)
+    if core_uncore and benchmark == "MLIR":
+        print("Capturing core_uncore data!")
+        # Run the experiments
+        _, _, core_uncore_data_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir,
+                                                                      machine_name=machine,
+                                                                      suffix=suffix + "_mlir",
+                                                                      KernelFolder=False,
+                                                                      RooflineFolder=False,
+                                                                      PredictionFolder=True)
+        core_uncore_output_dir = core_uncore_data_dir
+        build_dir_core_uncore = os.path.join(build_dir, "core_uncore_mlir")
+        os.makedirs(build_dir_core_uncore, exist_ok=True)
+        mlir_src = os.path.join(kernel_dir, "./MLIR_OpenEarth_BenchMarks/mlir_obj/obj_only")
+        build_dir_core_uncore_mlir = compile_obj_with_instumentation(src_dir=mlir_src, build_dir=build_dir_core_uncore,inst_type="energy time")
+        run_mlir_obj_core_uncore(build_dir=build_dir_core_uncore_mlir, output_dir=core_uncore_output_dir, 
+                              machine=machine, 
+                            #   num_itr=itr, 
+                              suffix=suffix + "_mlir", 
+                              sudo_password=password, 
+                            #   sleep=10, 
+                              core_uncore_file=core_uncore_file)
 if __name__ == "__main__":
     main()
