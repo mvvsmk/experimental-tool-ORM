@@ -18,10 +18,7 @@ def counter_thread(count,sudo_password,machine,is_multicore=False):
         p.cpu_affinity([4])
     else:
         p.cpu_affinity([0])
-    energy_msr = 1553
-    command_to_read_energy = f"sudo -S rdmsr -u {energy_msr}"
-    if machine == "zen3" :
-        command_to_read_energy = f"sudo -S rdmsr -u 0xc001029B"
+    command_to_read_energy = f"sudo -S rdmsr -u {get_energy_msr(machine)}"
     energy_start = rapl_energy_max
     while not stop_event.is_set():
         try :

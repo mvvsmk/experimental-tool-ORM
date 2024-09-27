@@ -238,6 +238,17 @@ def set_frequency(sudo_password,frequency) -> None:
     except subprocess.CalledProcessError as e:
         print(f"Error setting frequency to {frequency}: {e}")
 
+def set_frequency_cap(sudo_password,frequency) -> None:
+    """
+    Set the frequency of the cpu to a specific value
+    """
+    try:
+        # subprocess.call(f"sudo sh -c 'echo {frequency} > /sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed'",shell=True)
+        subprocess.run([f"sudo -S ./bash/echo_file.sh {frequency} /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        print(f"Frequency set to {frequency}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error setting frequency to {frequency}: {e}")
+
 #reset frequencies
 def reset_frequency(sudo_password) -> None:
     all = get_available_frequencies()
