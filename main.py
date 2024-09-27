@@ -763,6 +763,6 @@ def exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset
                               suffix=suffix + "_mlir", 
                               sudo_password=password, 
                             #   sleep=10, 
-                              core_uncore_file=core_uncore_file)
+                              core_uncore_file=core_uncore_csv)
 if __name__ == "__main__":
     main()

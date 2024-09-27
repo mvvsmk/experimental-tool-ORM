@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import time
-from utils_freq import reset_frequency, reset_uncore_freq_intel, set_frequency, set_max_uncore_freq_intel
+from utils_freq import reset_frequency, reset_uncore_freq_intel, set_frequency, set_max_uncore_freq_intel, set_frequency_cap
 from utils_power import run_with_energy_thread, set_power_cap, make_session_set_powercap, make_session_reset_powercap
 
 def run_kernels_energy_and_time(file_to_run,password,machine,is_multicore=False):
@@ -190,7 +190,7 @@ def core_uncore_collect_kernels_energy_and_time(build_dir, output_dir,
         dataframe_core_uncore = pd.read_csv(core_uncore_csv, index_col=0)
         # set core frequency
         core_freq = dataframe_core_uncore.loc[executable]['CoreFreq']
-        set_frequency(sudo_password=password, frequency=core_freq)
+        set_frequency_cap(sudo_password=password, frequency=core_freq)
         # set uncore frequency
         uncore_freq = dataframe_core_uncore.loc[executable]['UncoreFreq']
         set_max_uncore_freq_intel(frequency=uncore_freq,password=password)

@@ -10,7 +10,7 @@ import json
 import threading
 import psutil
 import time
-from utils_freq import reset_frequency, reset_uncore_freq_intel, set_frequency, set_max_uncore_freq_intel
+from utils_freq import reset_frequency, reset_uncore_freq_intel, set_frequency, set_max_uncore_freq_intel, set_frequency_cap
 from utils_power import run_with_energy_thread, set_power_cap, make_session_set_powercap, make_session_reset_powercap
 
 def parse_args():
@@ -356,7 +356,7 @@ def run_mlir_obj_core_uncore(build_dir,output_dir,sudo_password,core_uncore_csv,
             dataframe_core_uncore = pandas.read_csv(core_uncore_csv, index_col=0)
             # set core frequency
             core_freq = dataframe_core_uncore.loc[executable]['CoreFreq']
-            set_frequency(sudo_password=sudo_password, frequency=core_freq)
+            set_frequency_cap(sudo_password=sudo_password, frequency=core_freq)
             # set uncore frequency
             uncore_freq = dataframe_core_uncore.loc[executable]['UncoreFreq']
             set_max_uncore_freq_intel(frequency=uncore_freq,password=sudo_password)
