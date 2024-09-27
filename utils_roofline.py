@@ -529,7 +529,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
         MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
     
     if core:
-        MAD_PER_ELEMENT_values = [0,50000]   
+        MAD_PER_ELEMENT_values = [0,1000]   
     
     # MAD_PER_ELEMENT_values = [1, 10 ,100, 1000, 10000]
     Mad_PER_ELEMENT_values = list(set(MAD_PER_ELEMENT_values))
