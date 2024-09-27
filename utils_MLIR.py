@@ -10,6 +10,7 @@ import json
 import threading
 import psutil
 import time
+from utils_freq import reset_frequency, reset_uncore_freq_intel, set_frequency, set_max_uncore_freq_intel
 from utils_power import run_with_energy_thread, set_power_cap, make_session_set_powercap, make_session_reset_powercap
 
 def parse_args():
@@ -308,6 +309,85 @@ def run_mlir_obj_powercap(build_dir,output_dir,sudo_password,powercap_file,machi
     df = pandas.read_csv(output_file)
     df = df.groupby("Name").median()
     df.to_csv(output_file_median)
+
+def run_mlir_obj_core_uncore(build_dir,output_dir,sudo_password,core_uncore_csv,machine,suffix="",itr = 1):
+    mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
+    mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
+    data = {
+        "Name" : [],
+        "CoreFreq" : [],
+        "UncoreFreq" : [],
+        "Energy(J)" : [],
+        "Time(s)" : [],
+    }
+    list_of_files_to_run = []
+    output_file = os.path.join(output_dir,f"MODEL_CORE_UNCORE_{suffix}.csv")
+    output_file_median = os.path.join(output_dir,f"MODEL_CORE_UNCORE_{suffix}_median.csv")
+    core_uncore_dataframe = pandas.read_csv(core_uncore_csv)
+    list_of_files_to_run = list(core_uncore_dataframe["Name"].unique())
+    
+    print(f"files to run {list_of_files_to_run}")
+    
+    # check what all files are already run to avoid rerunning
+    files_run = []
+    if os.path.isfile(output_file):
+        df = pandas.read_csv(output_file)
+        files_run = df["Name"].unique()
+        files_run = [os.path.basename(x) for x in files_run]
+        for file in df["Name"].unique():
+            itr_count = (df['Name'] == file).sum()
+            if itr_count < itr :
+                df = df[df["Name"] != file]
+                files_run.remove(file)
+        data = {
+            "Name" : df["Name"].tolist(),
+            "CoreFreq" : df["CoreFreq"].tolist(),
+            "UncoreFreq" : df["UncoreFreq"].tolist(),
+            "Energy(J)" : df["Energy(J)"].tolist(),
+            "Time(s)" : df["Time(s)"].tolist(),
+        }
+    
+    for _, executable in enumerate(list_of_files_to_run):
+        if executable in files_run :
+            print(f"already run {executable}")
+            continue
+        for _ in range(itr):
+            # read core and uncore frequecies from the csv file
+            dataframe_core_uncore = pandas.read_csv(core_uncore_csv, index_col=0)
+            # set core frequency
+            core_freq = dataframe_core_uncore.loc[executable]['CoreFreq']
+            set_frequency(sudo_password=sudo_password, frequency=core_freq)
+            # set uncore frequency
+            uncore_freq = dataframe_core_uncore.loc[executable]['UncoreFreq']
+            set_max_uncore_freq_intel(frequency=uncore_freq,password=sudo_password)
+
+            mlir_file = os.path.join(build_dir,executable)
+            mlir_baseName = os.path.basename(mlir_file)
+            mlir_baseName = os.path.splitext(mlir_baseName)[0]
+            mlir_baseName = os.path.join(build_dir,mlir_baseName)
+            augment_env = f" LD_LIBRARY_PATH={mlir_runner_libs}:$LD_LIBRARY_PATH LIBRARY_PATH={mlir_runner_libs}:$LIBRARY_PATH "
+            command = f"sudo -S {augment_env} {mlir_file}"
+            print(f"will run : {command}")
+            reading = run_with_energy_thread(command=command,password=sudo_password,machine=machine)
+            data["Name"].append(executable)
+            data["CoreFreq"].append(executable)
+            data["UncoreFreq"].append(executable)
+            data["Energy(J)"].append(reading["Energy Reading"])
+            data["Time(s)"].append(reading["Time Reading"])
+            df = pandas.DataFrame(data)
+            df.to_csv(output_file,index=False)
+
+    #reset core and uncore frequecies
+    reset_frequency(sudo_password=sudo_password)
+    reset_uncore_freq_intel(password=sudo_password)
+    
+    print(f"Result collected in file {output_file}")
+    #group by name and take median
+    df = pandas.read_csv(output_file)
+    df = df.groupby("Name").median()
+    df.to_csv(output_file_median)
+    print(f"Output written to {output_file}")
+    print(f"Output median written to {output_file_median}")
 
 if __name__ == "__main__" :
     # parse_args()
