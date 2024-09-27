@@ -19,8 +19,9 @@ def get_max_uncore_freq_intel() -> int:
 
 
 def set_uncore_freq_intel(frequency,password) -> None:
-    command1 = f"echo '{frequency}'  | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
-    command2 = f"echo '{frequency}'  | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
+    "./bash/echo_file.sh {frequency} /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq"
+    command1 = f"sudo -S ./bash/echo_file.sh {frequency} /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
+    command2 = f"sudo -S ./bash/echo_file.sh {frequency} /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
     try:
         subprocess.run([command1],input=password.encode('utf-8'),shell=True,check=True)
         subprocess.run([command2],input=password.encode('utf-8'),shell=True,check=True)
@@ -41,8 +42,8 @@ Use `initial_max_freq_khz` and `initial_min_freq_khz` to reset uncore frequecies
 to default values
 """
 def reset_uncore_freq_intel(password) -> None:
-    command1 = f"cat /sys/devices/system/cpu/intel_uncore_frequency/initial_max_freq_khz | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
-    command2 = f"cat /sys/devices/system/cpu/intel_uncore_frequency/initial_min_freq_khz | sudo tee  /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
+    command1 = f"sudo -S ./bash/echo_file.sh /sys/devices/system/cpu/intel_uncore_frequency/initial_max_freq_khz /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
+    command2 = f"sudo -S ./bash/echo_file.sh /sys/devices/system/cpu/intel_uncore_frequency/initial_min_freq_khz /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
     try:
         subprocess.run([command1],input=password.encode('utf-8'),shell=True,check=True)
         subprocess.run([command2],input=password.encode('utf-8'),shell=True,check=True)
@@ -85,7 +86,6 @@ def set_governer(governer,sudo_password) -> None:
     Set the governer to userspace
     """
     try:
-        # subprocess.call("sudo sh -c 'echo userspace > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor'",stdin=password.encode() ,shell=True).communicate()
         subprocess.run([f"sudo -S LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-set -g {governer}"],input=sudo_password.encode('utf-8'),shell=True,check=True)
         print("Governer set to userspace")
     except subprocess.CalledProcessError as e:
@@ -232,8 +232,8 @@ def set_frequency(sudo_password,frequency) -> None:
     """
     try:
         # subprocess.call(f"sudo sh -c 'echo {frequency} > /sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed'",shell=True)
-        subprocess.run([f"echo {frequency} | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq"],input=sudo_password.encode('utf-8'),shell=True,check=True)
-        subprocess.run([f"echo {frequency} | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([f"sudo -S ./bash/echo_file.sh {frequency} /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq"],input=sudo_password.encode('utf-8'),shell=True,check=True)
+        subprocess.run([f"sudo -S ./bash/echo_file.sh {frequency} /sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq"],input=sudo_password.encode('utf-8'),shell=True,check=True)
         print(f"Frequency set to {frequency}")
     except subprocess.CalledProcessError as e:
         print(f"Error setting frequency to {frequency}: {e}")
