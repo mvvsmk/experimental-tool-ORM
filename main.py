@@ -701,5 +701,47 @@ def exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset
                                                  output_dir=core_uncore_output_dir,
                                                  machine=machine, num_itr=itr,
                                                  suffix=suffix, password=password, sleep=10, core_uncore_csv=core_uncore_csv)
+    if core_uncore and benchmark == "Polybench-tiled":
+        print("Capturing core_uncore data!")
+        # Run the experiments
+        _, _, core_uncore_output_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir,
+                                                                      machine_name=machine, 
+                                                                      suffix=suffix, KernelFolder=False,
+                                                                      RooflineFolder=False,
+                                                                      PredictionFolder=True)
+        build_dir_core_uncore = os.path.join(build_dir, "core_uncore")
+        os.makedirs(build_dir_core_uncore, exist_ok=True)
+        mem_fencing_src = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_mem_fencing_tiled")
+        
+        build_dir_powercap_polybench = build_polybench_kernels_energy_time(src_dir=mem_fencing_src, 
+                                                                           build_dir=build_dir_core_uncore,
+                                                                           dataset=dataset,
+                                                                           data_type=data_type)
+
+        core_uncore_collect_kernels_energy_and_time(build_dir=build_dir_powercap_polybench, 
+                                                 output_dir=core_uncore_output_dir,
+                                                 machine=machine, num_itr=itr,
+                                                 suffix=suffix, password=password, sleep=10, core_uncore_csv=core_uncore_csv)
+    if core_uncore and benchmark == "Polybench-pluto-openmp":
+        print("Capturing core_uncore data!")
+        # Run the experiments
+        _, _, core_uncore_output_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir,
+                                                                      machine_name=machine, 
+                                                                      suffix=suffix, KernelFolder=False,
+                                                                      RooflineFolder=False,
+                                                                      PredictionFolder=True)
+        build_dir_core_uncore = os.path.join(build_dir, "core_uncore")
+        os.makedirs(build_dir_core_uncore, exist_ok=True)
+        mem_fencing_src = os.path.join(kernel_dir, "./PolyBenchC-4.2.1_pluto_openmp")
+        
+        build_dir_powercap_polybench = build_polybench_kernels_energy_time(src_dir=mem_fencing_src, 
+                                                                           build_dir=build_dir_core_uncore,
+                                                                           dataset=dataset,
+                                                                           data_type=data_type)
+
+        core_uncore_collect_kernels_energy_and_time(build_dir=build_dir_powercap_polybench, 
+                                                 output_dir=core_uncore_output_dir,
+                                                 machine=machine, num_itr=itr,
+                                                 suffix=suffix, password=password, sleep=10, core_uncore_csv=core_uncore_csv)
 if __name__ == "__main__":
     main()
