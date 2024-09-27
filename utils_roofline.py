@@ -8,6 +8,7 @@ import numpy as np
 from utils_likwid import Likwid
 import pandas as pd
 import datetime
+from utils_energy import get_constant_power
 from utils_freq import get_available_frequencies,set_frequency,set_governer,set_uncore_freq_intel,get_max_uncore_freq_intel
 from utils_exp_params import check_exp_setup
 from utils_state import load_state, save_state
@@ -289,35 +290,6 @@ def getcache_array_mapping(machine,cache):
     }
     return data[machine][cache]
 
-def get_constant_power(machine : str,sudo_pass :str, duration :str) -> float:
-    energy_output = [0,0,0]
-    count = 0
-    while count < 3:
-        try:
-            output = subprocess.run(f"./bash/constant_power_measurement.sh {sudo_pass} {duration}",shell=True,capture_output=True,check=True,timeout=3000)
-        except subprocess.CalledProcessError as e:
-            print(f"Error: running constant_power_measurement.sh failed with return code {e.returncode}")
-            continue
-        res = output.stdout.decode('utf-8').split("\n\n")
-        res = [int(x) for x in res if x != ""]
-        energy_output[count] = res[1] - res[0]
-        if energy_output[count] > 0 :
-            count += 1
-
-        else:
-            print("Energy is less than 0")
-            continue
-    
-    factor = get_energy_multiplication_factor(machine)
-    
-    mean_energy = np.mean(energy_output) * factor
-        
-    data = {
-        "Energy" : mean_energy,
-        "Power" : mean_energy / duration,
-        "Time" : duration
-    }
-    return data
 
 
 
