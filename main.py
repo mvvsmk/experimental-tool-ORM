@@ -683,7 +683,7 @@ def exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset
     if core_uncore and benchmark == "Polybench":
         print("Capturing core_uncore data!")
         # Run the experiments
-        _, _, core_uncore_output_dir = setup_dir_structure_with_predictions(tools_dir=os.curdir,
+        _, _, core_uncore_output_dir = setup_dir_structure_with_prediction(tools_dir=os.curdir,
                                                                       machine_name=machine, 
                                                                       suffix=suffix, KernelFolder=False,
                                                                       RooflineFolder=False,

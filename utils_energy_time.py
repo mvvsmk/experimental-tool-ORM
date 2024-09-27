@@ -181,7 +181,7 @@ def core_uncore_collect_kernels_energy_and_time(build_dir, output_dir,
             "Time(s)" : df_prev["Time(s)"].values.tolist()
         }
     # run all executables inside the build directory
-    for _i, executable in enumerate(os.listdir(build_dir)):
+    for _, executable in enumerate(os.listdir(build_dir)):
         run_itr = num_itr
         if executable in data["Name"]:
             run_itr = num_itr - len(data["Name"])
