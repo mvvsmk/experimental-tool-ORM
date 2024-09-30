@@ -168,20 +168,7 @@ def get_curve_constants(folder_name,plot = False,caches = ["L1D","L2","L3","DRAM
         indivisual_cache_flop[cache] = cache_data_flop[cache]
         indivisual_cache_bytes[cache] = cache_data_bytes[cache]
         indivisual_cache_balance[cache] = cache_data_balance[cache]
-    
-    # l1d_flop = cache_data_flop["L1D"]
-    # l2_flop = cache_data_flop["L2"]
-    # l3_flop = cache_data_flop["L3"]
-    # dram_flop = cache_data_flop["DRAM"]
-    # l1d_bytes = cache_data_bytes["L1D"]
-    # l2_bytes = cache_data_bytes["L2"]
-    # l3_bytes = cache_data_bytes["L3"]
-    # dram_bytes = cache_data_bytes["DRAM"]
-    # l1d_balance = cache_data_balance["L1D"]
-    # l2_balance = cache_data_balance["L2"]
-    # l3_balance = cache_data_balance["L3"]
-    # dram_balance = cache_data_balance["DRAM"] 
-    
+
     list_of_flop_params = ["performance","Time per flop","Energy per flop","Peak Power flop"]
     list_of_bytes_params = ["Bandwidth","Time per byte","Energy per byte","Peak Power byte"]
 
@@ -205,16 +192,10 @@ def get_curve_constants(folder_name,plot = False,caches = ["L1D","L2","L3","DRAM
     for param in ["Time Balance","Energy Balance"]:
         print(param)
         for cache in caches:
-            print(indivisual_cache_balance[cache])
-            const_data_balance[param] = {}
+            if param not in const_data_balance.keys():
+                const_data_balance[param] = {}
+            const_data_balance[param][cache] = {}
             const_data_balance[param][cache] = get_curve_fit_equations(indivisual_cache_balance[cache],param)
-            # get_curve_fit_equations(indivisual_cache_balance[cache],param)
-        # const_data_balance[param] = {
-        #     # "L1D" : get_curve_fit_equations(l1d_balance,param),
-        #     # "L2" : get_curve_fit_equations(l2_balance,param),
-        #     # "L3" : get_curve_fit_equations(l3_balance,param),
-        #     "DRAM" : get_curve_fit_equations(dram_balance,param)
-        # }
         for cache in const_data_balance[param]:
             for degree in const_data_balance[param][cache]:
                 data["Cache Name"].append(cache)
@@ -224,20 +205,16 @@ def get_curve_constants(folder_name,plot = False,caches = ["L1D","L2","L3","DRAM
                 data["coff2"].append(const_data_balance[param][cache][degree]["coff2"])
                 data["coff3"].append(const_data_balance[param][cache][degree]["coff3"])
                 data["const"].append(const_data_balance[param][cache][degree]["const"])
-    
+    # exit()
     const_data_flop = {}
     const_data_bytes = {}
     for param in list_of_flop_params:
         for cache in caches:
-            const_data_flop[param] = {}
+            if param not in const_data_flop.keys():
+                const_data_flop[param] = {}
+            const_data_flop[param][cache] = {}
             const_data_flop[param][cache] = get_curve_fit_equations(indivisual_cache_flop[cache],param)
-        # print(param)
-        # const_data_flop[param] = {
-        #     # "L1D" : get_curve_fit_equations(l1d_flop,param),
-        #     # "L2" : get_curve_fit_equations(l2_flop,param),
-        #     # "L3" : get_curve_fit_equations(l3_flop,param),
-        #     "DRAM" : get_curve_fit_equations(dram_flop,param)
-        # }
+
         for cache in const_data_flop[param]:
             for degree in const_data_flop[param][cache]:
                 data["Cache Name"].append(cache)
@@ -251,14 +228,11 @@ def get_curve_constants(folder_name,plot = False,caches = ["L1D","L2","L3","DRAM
     
     for param in list_of_bytes_params:
         for cache in caches:
-            const_data_bytes[param] = {}
+            if param not in const_data_bytes.keys():
+                const_data_bytes[param] = {}
+            const_data_bytes[param][cache] = {}
             const_data_bytes[param][cache] = get_curve_fit_equations(indivisual_cache_bytes[cache],param)
-        # const_data_bytes[param] = {
-        #     # "L1D" : get_curve_fit_equations(l1d_bytes,param),
-        #     # "L2" : get_curve_fit_equations(l2_bytes,param),
-        #     # "L3" : get_curve_fit_equations(l3_bytes,param),
-        #     "DRAM" : get_curve_fit_equations(dram_bytes,param)
-        # }
+
         for cache in const_data_bytes[param]:
             for degree in const_data_bytes[param][cache]:
                 data["Cache Name"].append(cache)

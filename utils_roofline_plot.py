@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import enum
+import gc
 
 # function to parse arguments
 def parseArg():
@@ -188,12 +189,6 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
     ax[1, 1].grid(which="both")
     ax[1, 1].legend()
 
-
-    # show the plot
-    # plt.show()
-    # plt.close()
-
-    # save the plot
     output_file = f"roofline_comparison_{machine}.png"
     plt.savefig(os.path.join(output_folder, output_file))
     print(f"Plot saved to {os.path.join(output_folder, output_file)}")
@@ -206,6 +201,10 @@ def plot_muliple_roofline(result_folder,output_folder,machine):
     #sort the dataframe by frequency
     # df = df.sort_values(by='Frequency(kHz)')
     df.to_csv(os.path.join(output_folder, output_file), index=False)
+    del df
+    plt.clf()
+    plt.close()
+    gc.collect()
 
 
 

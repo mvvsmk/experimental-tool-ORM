@@ -18,6 +18,7 @@ from utils_roofline_plot import plot_muliple_roofline
 from utils_energy import get_energy_multiplication_factor
 from utils_curve_fit_const import get_curve_constants
 import psutil
+import gc
 
 base_array_len_a_roofline_energy = 64
 
@@ -487,12 +488,9 @@ def get_energy_roofline_time_benchmarks(sudo_password,
         "brodwell" : 16,
         "zen3" : 16,
     }
-    #make only flop benchmark
-    # exit()
+
     make_benchmarks_only_fma(build_dir,source_dir,MAD_PER_ELEMENT=machine_to_reg_map[machine],machine=machine)    
-    
-    # MAD_PER_ELEMENT_values = [0]
-    # MAD_PER_ELEMENT_values = [0,50000]
+
     MAD_PER_ELEMENT_values = np.logspace(1,3,num=10)
     MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
     
@@ -502,6 +500,8 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     
     if core:
         MAD_PER_ELEMENT_values = [0,1000]   
+    
+    MAD_PER_ELEMENT_values = [0,1000]   
     
     # MAD_PER_ELEMENT_values = [1, 10 ,100, 1000, 10000]
     Mad_PER_ELEMENT_values = list(set(MAD_PER_ELEMENT_values))
@@ -517,31 +517,10 @@ def get_energy_roofline_time_benchmarks(sudo_password,
         make_benchmarks(build_dir,source_dir,MAD_PER_ELEMENT,machine=machine)
         print(f"Made benchmarks for MAD_PER_ELEMENT: {MAD_PER_ELEMENT}")
 
-    data = {
-            "Frequency(kHz)" : [],
-            "Execution Time(s)" : [],
-            "Energy(J)" : [],
-            "Power(W)" : [],
-            "total_flops" : [],
-            "total_missed_bytes" : [],
-            "OI" : [],
-            "cache_level" : [],
-            "counter_used" : [],
-            "Constant Energy (J)" : [],
-            "Duration measurement (s)" : [],
-            "Constant Power (W)" : [],
-            "File Name" : [],
-            "Array Size" : [],
-            }
-        
     print(f"build_dir: {build_dir}")
     files = os.listdir(build_dir)
     print(f"files: {files}")
-    # exit()
-    # with progressbar.ProgressBar(max_value=len(files), 
-    #                         widgets=widgets) as bar:
-    for j, cache in enumerate(caches):
-        # bar.update(progress)
+    for _, cache in enumerate(caches):
         data = {
             "Frequency(kHz)" : [],
             "Execution Time(s)" : [],
@@ -583,7 +562,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                 energy_readings = []
                 readings = {}
                 print(f"array_size: {array_size}")
-                for i in range(itr):
+                for _ in range(itr):
                     data2 = {
                             "Frequency(kHz)" : [],
                             "Execution Time(s)" : [],
@@ -652,9 +631,6 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                     total_flops = float(output_list[-2])
                     total_missed_bytes = float(output_list[-1])
                     const_power_data = constant_power
-                    # if is_Fma_only:
-                    #     total_missed_bytes = 0
-                    #     OI = float('inf')
                     if core:
                         data2["Frequency(kHz)"].append(freq)
                     else:
@@ -702,25 +678,18 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                 data["Constant Power (W)"].append(readings[median_energy]["Constant Power (W)"][0])
                 data['File Name'].append(readings[median_energy]["File Name"][0])
                 data['Array Size'].append(readings[median_energy]["Array Size"][0])
-                df = pd.DataFrame(data)
-                df.sort_values(by=['OI'],inplace=True)
-                df.to_csv(output_file,index=False)
         
-        # print(data)
-
-    print("=============================================================================")
-    print("Data collected successfully.")
-    print(f"Data: {data}")
-    print("=============================================================================")
-    df = pd.DataFrame(data)
-    df = df.drop('cache_level', axis=1)
-    df = df.drop('counter_used', axis=1)
-    df = df.groupby('File Name').median().reset_index()
-    df.sort_values(by=['OI'],inplace=True)
-    # df.to_csv(output_file,index=False)
-    
-
-    # create a dataframe from the data
+        df = pd.DataFrame(data)
+        df.sort_values(by=['OI'],inplace=True)
+        df.to_csv(output_file,index=False)
+        del df        
+        print("=============================================================================")
+        print("Data collected successfully.")
+        print(f"Data: {data}")
+        print("=============================================================================")
+        del data
+        del data2
+        gc.collect()
 
 
 
@@ -850,7 +819,7 @@ if __name__ == "__main__":
                                             high_power=args.high_power,machine=args.machine,constant_power=constant_power,itr=itr,
                                             caches=caches,core=core,uncore_freq=freq)
         plot_muliple_roofline(result_folder=output_dir_freq,output_folder=output_dir_freq,machine=machine)
-        # exit()
+        gc.collect()
         state["list ran"].append(freq)
         save_state(state, 'energy_validation_state.json')
         print(f"State saved successfully after running at frequency {freq}kHz")
@@ -858,9 +827,13 @@ if __name__ == "__main__":
     #get date and time
     current_datetime = datetime.datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
-    curve_const = get_curve_constants(folder_name=output_dir, caches=caches)
-    curve_const.to_csv(os.path.join(output_dir,f"curve_constants_for_{machine}_{formatted_datetime}.csv"),index=False)
-    exit()
+    curve_const = get_curve_constants(folder_name=output_dir, caches=caches)    
+    added_suffix = ""
+    if core :
+        added_suffix = "core"
+    else:
+        added_suffix = "uncore"
+    curve_const.to_csv(os.path.join(output_dir,f"curve_constants_for_{machine}_{formatted_datetime}_{added_suffix}.csv"),index=False)
     os.remove('energy_validation_state.json')
     print("State file deleted successfully.")
     print("=============================================================================")
