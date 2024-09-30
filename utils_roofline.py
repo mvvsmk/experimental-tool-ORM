@@ -783,9 +783,12 @@ if __name__ == "__main__":
     caches = ['L1D' , 'L2' , 'L3', 'DRAM']
     min_freq = min(list_of_freq)
     max_freq = max(list_of_freq)
+    added_suffix = ""
     if core :
+        added_suffix = "core"
         list_of_freq = list_of_freq
     else :
+        added_suffix = "uncore"
         max_uncore_freq = get_max_uncore_freq_intel()
         min_uncore_freq = min_freq
         # lis of frequencies is from max to min with step of 100MHz the values are in kHz
@@ -793,8 +796,12 @@ if __name__ == "__main__":
         list_of_freq.append(min_uncore_freq)
         caches = ['DRAM']
         set_frequency(sudo_password=sudo_password,frequency=min_freq)
+
+    output_dir = os.path.join(output_dir,f"{added_suffix}")
+    os.makedirs(output_dir,exist_ok=True)
     
-    for freq in list_of_freq:
+    
+    for freq in list_of_freq:    
         output_dir_freq = os.path.join(output_dir,f"{freq}kHz")
         freq_suff = f"{freq}kHz"
         if core :
@@ -828,11 +835,6 @@ if __name__ == "__main__":
     current_datetime = datetime.datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
     curve_const = get_curve_constants(folder_name=output_dir, caches=caches)    
-    added_suffix = ""
-    if core :
-        added_suffix = "core"
-    else:
-        added_suffix = "uncore"
     curve_const.to_csv(os.path.join(output_dir,f"curve_constants_for_{machine}_{formatted_datetime}_{added_suffix}.csv"),index=False)
     os.remove('energy_validation_state.json')
     print("State file deleted successfully.")
