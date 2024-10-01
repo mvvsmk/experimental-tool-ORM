@@ -9,7 +9,7 @@ from utils_likwid import Likwid
 import pandas as pd
 import datetime
 from utils_energy import get_constant_power
-from utils_freq import get_available_frequencies,set_frequency,set_governer,set_uncore_freq_intel,get_max_uncore_freq_intel
+from utils_freq import get_available_frequencies,set_frequency,set_governer,set_uncore_freq_intel,get_max_uncore_freq_intel,reset_uncore_freq_intel
 from utils_exp_params import check_exp_setup
 from utils_state import load_state, save_state
 from utils_asm import make_sum_squares_asm_raptorlake, make_sum_squares_asm_rocketlake, make_sum_squares_asm_broadwell, make_sum_squares_asm_zen3
@@ -312,10 +312,13 @@ def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> No
         # get a list of all the items present in the source directory
         old_items = os.listdir(source_dir)
         filename=f"main_{MAD_PER_ELEMENT}"
-        output = subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}"])
+        if core :
+            subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}", "core"])
+        else:
+            subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}", "uncore"])
         # after the make command runs copy the binary with the name filename to build_dir
         shutil.copy(filename,build_dir)
-        output = subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}", "clean"])
+        subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}", "clean"])
         # delete any files that were newly created after the make command buy getting a list of all the items after the make command and comparing it with the original list of items
         # this is just in case make clean dosen't work
         new_items = os.listdir(source_dir)
@@ -332,7 +335,7 @@ def make_benchmarks(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> No
     except subprocess.CalledProcessError as e:
         print(f"Error: Benchmarks compilation failed with return code {e.returncode}")
 
-def make_benchmarks_only_fma(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE=1) -> None:
+def make_benchmarks_only_fma(build_dir,source_dir, MAD_PER_ELEMENT, machine,core,TYPE=1) -> None:
     try:
         print("<------------------------------------------------------------------------>")
         # store the current working directory
@@ -343,10 +346,13 @@ def make_benchmarks_only_fma(build_dir,source_dir, MAD_PER_ELEMENT, machine,TYPE
         # get a list of all the items present in the source directory
         old_items = os.listdir(source_dir)
         filename=f"main_{MAD_PER_ELEMENT}"
-        output = subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}"])
+        if core :
+            subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}", "core"])
+        else:
+            subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}", "uncore"])
         # after the make command runs copy the binary with the name filename to build_dir
         shutil.copy(filename,build_dir)
-        output = subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}", "clean"])
+        subprocess.run(["make",f"MAD_PER_ELEMENT={MAD_PER_ELEMENT}",f"TYPE={1}", "clean"])
         new_items = os.listdir(source_dir)
         new_files = [item for item in new_items if item not in old_items]
         print(f"new_files left after make clean: {new_files}")
@@ -489,7 +495,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
         "zen3" : 16,
     }
 
-    make_benchmarks_only_fma(build_dir,source_dir,MAD_PER_ELEMENT=machine_to_reg_map[machine],machine=machine)    
+    make_benchmarks_only_fma(build_dir,source_dir,MAD_PER_ELEMENT=machine_to_reg_map[machine],machine=machine,core=core)    
 
     MAD_PER_ELEMENT_values = np.logspace(1,3,num=10)
     MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
@@ -501,7 +507,9 @@ def get_energy_roofline_time_benchmarks(sudo_password,
     if core:
         MAD_PER_ELEMENT_values = [0,1000]   
     
-    MAD_PER_ELEMENT_values = [0,1000]   
+    # MAD_PER_ELEMENT_values = [0,1000]   
+    MAD_PER_ELEMENT_values = np.logspace(1,3,num=8).astype(int)
+    MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
     
     # MAD_PER_ELEMENT_values = [1, 10 ,100, 1000, 10000]
     Mad_PER_ELEMENT_values = list(set(MAD_PER_ELEMENT_values))
@@ -615,7 +623,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                             print(f"Error: output_list is empty for {filename}")
                             continue
                         
-                        Energy = float(output_list[-4]) * energy_mul
+                        Energy = float(output_list[-4]) / 10**6
                         print(f"output_file : {filename}")
                         if Energy > 0  :
                             success = True
@@ -624,7 +632,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                             continue
                         
                     freq = float(frequency)
-                    Energy = float(output_list[-4]) * energy_mul
+                    Energy = float(output_list[-4]) / 10**6
                     execution_time = float(output_list[-9])
                     Power = Energy / execution_time
                     OI = float(output_list[-3])
@@ -837,6 +845,7 @@ if __name__ == "__main__":
     curve_const = get_curve_constants(folder_name=output_dir, caches=caches)    
     curve_const.to_csv(os.path.join(output_dir,f"curve_constants_for_{machine}_{formatted_datetime}_{added_suffix}.csv"),index=False)
     os.remove('energy_validation_state.json')
+    reset_uncore_freq_intel(sudo_password)
     print("State file deleted successfully.")
     print("=============================================================================")
     print("Energy validation completed successfully.")

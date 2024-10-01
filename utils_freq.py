@@ -42,8 +42,8 @@ Use `initial_max_freq_khz` and `initial_min_freq_khz` to reset uncore frequecies
 to default values
 """
 def reset_uncore_freq_intel(password) -> None:
-    command1 = f"sudo -S ./bash/echo_file.sh /sys/devices/system/cpu/intel_uncore_frequency/initial_max_freq_khz /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
-    command2 = f"sudo -S ./bash/echo_file.sh /sys/devices/system/cpu/intel_uncore_frequency/initial_min_freq_khz /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
+    command1 = f"sudo -S ./bash/echo_file.sh $(cat /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/initial_max_freq_khz) /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/max_freq_khz"
+    command2 = f"sudo -S ./bash/echo_file.sh $(cat /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/initial_min_freq_khz) /sys/devices/system/cpu/intel_uncore_frequency/package_00_die_00/min_freq_khz"
     try:
         subprocess.run([command1],input=password.encode('utf-8'),shell=True,check=True)
         subprocess.run([command2],input=password.encode('utf-8'),shell=True,check=True)
