@@ -29,7 +29,7 @@ def run_command_and_monitor(command, sudo_password):
     process_psutil = psutil.Process(process.pid)
     
     start_time = time.time()
-    timeout = 2400  # Timeout after 2400 seconds (40 minutes)
+    timeout = 4800  # Timeout after 4800 seconds (40 minutes)
 
     while True:
         time.sleep(5)  # Check every 5 seconds
@@ -268,25 +268,25 @@ def getcache_array_mapping(machine,cache):
         'L1D' : 640,
         'L2' : 6400,
         'L3' : 64000,
-        'DRAM' : 209715200
+        'DRAM' : 314572800
     },
     "raptorlake" :{
         'L1D' : 2048,
         'L2' : 16384,
         'L3' : 221184,
-        'DRAM' : 209715200
+        'DRAM' : 314572800
     },
     "rocketlake" :{
         'L1D' : 5120,
         'L2' : 15872,
         'L3' : 131072,
-        'DRAM' : 209715200
+        'DRAM' : 314572800
     },
     "zen3" :{
         'L1D' : 5120,
         'L2' : 15872,
         'L3' : 131072,
-        'DRAM' : 209715200
+        'DRAM' : 314572800
     },
     }
     return data[machine][cache]
@@ -375,7 +375,7 @@ def read_output(filename,
         command = f"echo {sudo_password} | sudo -S SIZE_ARR={arr_size} ITRS={dur}  PAPI_EVENT_NAME={papi_counter} FREQ={FREQ} {filename}"
         print(f"command : {command}")
         output = subprocess.run([command],
-                                check=True,shell=True,capture_output=True,timeout=600)
+                                check=True,shell=True,capture_output=True,timeout=6000)
         # output_stdout, output_stderr = run_command_and_monitor(command, sudo_password)
         output_list = output.stdout.decode('utf-8').strip().split("\n")
         # output_list = output_stdout.decode('utf-8').strip().split("\n")
@@ -497,19 +497,22 @@ def get_energy_roofline_time_benchmarks(sudo_password,
 
     make_benchmarks_only_fma(build_dir,source_dir,MAD_PER_ELEMENT=machine_to_reg_map[machine],machine=machine,core=core)    
 
-    MAD_PER_ELEMENT_values = np.logspace(1,3,num=10)
+    MAD_PER_ELEMENT_values = np.logspace(1,4,num=15)
     MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
     
-    if caches[0] == 'DRAM' :
-        MAD_PER_ELEMENT_values = np.logspace(1,3,num=10).astype(int)
-        MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
+    # if caches[0] == 'DRAM' :
+    #     MAD_PER_ELEMENT_values = np.logspace(1,4,num=20).astype(int)
+    #     MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
     
-    if core:
-        MAD_PER_ELEMENT_values = [0,1000]   
+    # if core:
+    #     MAD_PER_ELEMENT_values = [0,1000]   
     
+    # MAD_PER_ELEMENT_values = np.logspace(1,4,num=5).astype(int)
+    # MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
     # MAD_PER_ELEMENT_values = [0,1000]   
-    MAD_PER_ELEMENT_values = np.logspace(1,3,num=8).astype(int)
-    MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
+    # MAD_PER_ELEMENT_values = [0,1000]   
+    # MAD_PER_ELEMENT_values = np.logspace(1,3,num=8).astype(int)
+    # MAD_PER_ELEMENT_values = np.append(MAD_PER_ELEMENT_values,[0]).astype(int)
     
     # MAD_PER_ELEMENT_values = [1, 10 ,100, 1000, 10000]
     Mad_PER_ELEMENT_values = list(set(MAD_PER_ELEMENT_values))
@@ -565,7 +568,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                 array_len = getcache_array_mapping(machine=machine,cache='DRAM')
                 array_sizes_to_run = [array_len]
                 dur = get_time_duration('DRAM') * 1
-     
+
             for array_size in array_sizes_to_run:
                 energy_readings = []
                 readings = {}
@@ -623,7 +626,7 @@ def get_energy_roofline_time_benchmarks(sudo_password,
                             print(f"Error: output_list is empty for {filename}")
                             continue
                         
-                        Energy = float(output_list[-4]) / 10**6
+                        Energy = float(output_list[-4])
                         print(f"output_file : {filename}")
                         if Energy > 0  :
                             success = True
@@ -838,14 +841,15 @@ if __name__ == "__main__":
         state["list ran"].append(freq)
         save_state(state, 'energy_validation_state.json')
         print(f"State saved successfully after running at frequency {freq}kHz")
+        break
 
+    reset_uncore_freq_intel(sudo_password)
     #get date and time
     current_datetime = datetime.datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
     curve_const = get_curve_constants(folder_name=output_dir, caches=caches)    
     curve_const.to_csv(os.path.join(output_dir,f"curve_constants_for_{machine}_{formatted_datetime}_{added_suffix}.csv"),index=False)
     os.remove('energy_validation_state.json')
-    reset_uncore_freq_intel(sudo_password)
     print("State file deleted successfully.")
     print("=============================================================================")
     print("Energy validation completed successfully.")
