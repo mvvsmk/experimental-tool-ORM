@@ -19,6 +19,7 @@ from utils_exp_params import *
 from utils_dir import *
 from utils_papi import *
 from utils_state import *
+from test_core_uncore_json import *
 
 def setup_exp_conditions(exp_conditions, machine, password):
     for condition in exp_conditions:
@@ -50,9 +51,12 @@ def parse_args():
     parser.add_argument("--data_type", type=str, default="DATA_TYPE_IS_DOUBLE", help="Data type to run the experiments")
     parser.add_argument("--suffix", type=str, default=f"", help="Suffix for the experiment directory")
     parser.add_argument("--password", type=str, required=True, help="Password for sudo")
-    parser.add_argument("--inst_type", type=str, required=True, help="oracle, oracle+powercap, powercap, papi, core_uncore")
-    parser.add_argument("--benchmarks", type=str, required=True, help="MLIR, Polybench, Polybench-tiled, Polybench-pluto-openmp")
+    parser.add_argument("--inst_type", type=str, required=True, help="oracle, oracle+powercap, powercap, papi, core_uncore, frequency_cap")
+    parser.add_argument("--benchmarks", type=str, required=True, help="MLIR, Polybench, Polybench-tiled, Polybench-pluto-openmp, ML_c")
     parser.add_argument("--itr", type=int, default=1, help="Number of iterations to run the experiments")
+
+    parser.add_argument( "--modified-c-dir", type=str, default="modified_c", help="Path to modified C file directory")
+
     parser.add_argument("--freq_change", type=bool, default=False, help="Change the frequency")
     parser.add_argument('-e','--exp_conditions',
                         action='append',
@@ -76,11 +80,13 @@ def main():
     password = args.password
     inst_type = args.inst_type
     itr = args.itr
+    modified_c_dir = args.modified_c_dir
     freq_change = args.freq_change
     oracle = False
     powercap = False
     papi = False
     core_uncore = False
+    frequency_cap = False
     benchmark = args.benchmarks
     exp_conditions = args.exp_conditions
     frequencies_run = []
@@ -153,6 +159,8 @@ def main():
         papi = True
     elif inst_type == "core_uncore":
         core_uncore = True
+    elif inst_type == "frequency_cap":
+        frequency_cap = True
     else:
         print("Invalid inst_type")
         exit(1)
@@ -166,7 +174,7 @@ def main():
     
     
     if not freq_change:
-        exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, core_uncore, benchmark)
+        exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, core_uncore, frequency_cap, benchmark, modified_c_dir)
     else:
         available_frequencies = get_available_frequencies(machine, password)
         available_frequencies = sorted(available_frequencies, reverse=True)
@@ -175,14 +183,14 @@ def main():
                 print(f"Skipping frequency {freq}")
                 continue
             set_frequency(freq, machine, password)
-            exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset, data_type, suffix + f"_{freq}", password, itr, oracle, powercap, papi,core_uncore, benchmark)
+            exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset, data_type, suffix + f"_{freq}", password, itr, oracle, powercap, papi,core_uncore, frequency_cap, benchmark, modified_c_dir)
             frequencies_run.append(freq)
             save_state(state=state,file="state.json")
     # remove the state file
     os.remove("state.json")
 
  
-def exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, core_uncore, benchmark):
+def exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset, data_type, suffix, password, itr, oracle, powercap, papi, core_uncore, frequency_cap, benchmark, modified_c_dir):
     # First let's capture oracle data
     if oracle and benchmark == "Polybench":
         print("Capturing oracle data")
@@ -763,6 +771,28 @@ def exec(machine, powercap_file, core_uncore_csv, kernel_dir, build_dir, dataset
                               suffix=suffix + "_mlir", 
                               sudo_password=password, 
                             #   sleep=10, 
-                              core_uncore_file=core_uncore_csv)
+                              core_uncore_csv=core_uncore_csv)
+    if oracle and benchmark == "ML_c":
+        exec_frequency_cap_for_ML_c(kernel_dir,modified_c_dir, build_dir, password, machine, "oracle")
+    if frequency_cap and benchmark == "ML_c":
+        exec_frequency_cap_for_ML_c(kernel_dir,modified_c_dir, build_dir, password, machine, "frequency_cap")
+
+
+def exec_frequency_cap_for_ML_c(kernel_dir, modified_c_dir, build_dir, password, machine, instrumentation):
+    c_dir = os.path.join(kernel_dir,"c_files")
+    if not os.path.exists(modified_c_dir):
+        os.makedirs(modified_c_dir)
+
+    if modify_c_files(modified_c_dir, os.path.abspath(c_dir), instrumentation) == 1:
+        print(f"ERR : Couldn't modify C files, aborting building C files")
+        return
+    include_flags = "-I" + os.path.join(kernel_dir)
+    build_c_files(modified_c_dir, build_dir, include_flags)
+
+    output_dir = os.path.join(os.curdir, "output_csv", machine)
+    os.makedirs(output_dir, exist_ok=True)
+
+    collect_time_and_energy(build_dir, password, machine,
+                            True, output_dir)
 if __name__ == "__main__":
     main()
