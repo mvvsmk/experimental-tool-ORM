@@ -4,6 +4,47 @@ from common_imports import *
 from common_files import *
 from common_machine import *
 
+
+# red =  #ac3847
+# darkgree = #1c5954
+# brown = #744238
+# orange = #d35637
+# purple = #662c6d
+# deep pink = #352e36
+# deep green = #496357
+
+#---
+# 338b9a
+# 648458
+# 8db956
+# f7b24c
+#---
+
+def get_cache_color_list(caches_to_plot):
+    colors ={
+        "L1D" : "#338b9a",
+        "L2" : "#648458",
+        "L3" : "#f7b24c",
+        "DRAM" : "#ac3847"
+    }
+    return colors
+
+def get_marker_database_for_polybench(Name, polybench_df):
+    markers_l = ['o', 'v', '^', '<', '>', '1', '2', '3', '4', '8', 's', 'p', '*', 'h', 'H', '+', 'x', 'D', 'd', '|', '_', '.', ',', 'P', 'X']
+
+    # Add some random markers by repeating and extending the list
+    while len(markers_l) < 30:
+        markers_l += markers_l
+    
+    list_of_polybench = polybench_df["Name"].unique()
+    #create a dictionary of markers for each polybench kernel
+    markers = {}
+    for i, kernel in enumerate(list_of_polybench):
+        markers[kernel] = markers_l[i]   
+    
+    return markers   
+
+
 #function to extract the data from the roofline folder
 def get_roofline_data_from_folder(result_folder : str):
     files = os.listdir(result_folder)
@@ -116,7 +157,7 @@ def get_hier_constants(data :list, caches : list):
 
 def line_plot_hier_roofline_calculated(axes : mpl.axes._axes.Axes, caches_to_plot : list, roofline_folder : str, machine : str ,parameter : str):
     data, caches = get_roofline_data_from_folder(roofline_folder)
-    colors = plt.cm.viridis(np.linspace(0, 1, len(caches)))
+    colors = get_cache_color_list(caches_to_plot)
     
     oi_points = np.logspace(start=-4,stop=2,num=10000)
     df_constants = get_hier_constants(data, caches)
@@ -149,13 +190,13 @@ def line_plot_hier_roofline_calculated(axes : mpl.axes._axes.Axes, caches_to_plo
         
         if parameter == "power":
             for predicted_power_ in all_predicted_power:
-                axes.plot(oi_points, predicted_power_, label=f"{cache}", color=colors[i])
+                axes.plot(oi_points, predicted_power_, label=f"{cache}", color=colors[cache])
             axes.set_ylabel("Power (W)")
             axes.set_xlabel("Operational Intensity (FLOPs/Byte)")
 
         elif parameter == "performance":
             for predicted_performance_ in all_predicted_performance:
-                axes.plot(oi_points, predicted_performance_, label=f"{cache}", color=colors[i])
+                axes.plot(oi_points, predicted_performance_, label=f"{cache}", color=colors[cache])
             axes.set_ylabel("Performance (GFLOP/s)")
             axes.set_xlabel("Operational Intensity (FLOPs/Byte)")
     

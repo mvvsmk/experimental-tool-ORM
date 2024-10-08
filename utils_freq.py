@@ -148,7 +148,7 @@ def scaling_available_frequencies_present() -> bool:
 # check if the cpupower is installed
 def check_cpupower() -> bool:
     try:
-        output = subprocess.run("cpupower --version",shell=True,capture_output=True,check=True)
+        output = subprocess.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower --version",shell=True,capture_output=True,check=True)
         print(output.stdout.decode('utf-8'))
         return True
     except subprocess.CalledProcessError as e:
@@ -208,6 +208,31 @@ def get_available_frequencies_cpupower() -> list[int]:
         return []
 
 
+def is_driver_intel_pstate() -> bool:
+    try:
+        output = subprocess.check_output("cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver", shell=True)
+        if "intel_pstate" in output.decode():
+            return True
+        else:
+            return False
+    except subprocess.CalledProcessError as e:
+        print(f"Error running cpupower frequency-info: {e}")
+        return False
+
+def get_available_frequencies_cpupower_hw_limits() -> list[int]:
+    try:
+        output = subprocess.run("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64 cpupower frequency-info | grep \"hardware limits\"", shell=True,capture_output=True,check=True)
+        frequencies = output.stdout.decode('utf-8')
+        # frequencies = frequencies.replace("MHz","")
+        # frequencies = frequencies.replace("GHz","")
+        frequencies = frequencies.split(":")[1].strip().replace(" ","").split('-')
+        frequencies = convert_frequency(frequencies)
+        print(frequencies)
+        return frequencies
+    except subprocess.CalledProcessError as e:
+        print(f"Error running cpupower frequency-info: {e}")
+        return []
+
 # function to get available frequencies
 # check if the file /sys/devices/system/cpu/cpu*/cpufreq/scaling_available_frequencies exists
 # if it exists then use get_available_frequencies_freq_scaling_file to get frequencies
@@ -216,6 +241,8 @@ def get_available_frequencies() -> list[int]:
     if scaling_available_frequencies_present():
         return get_available_frequencies_freq_scaling_file()
     elif check_cpupower():
+        if is_driver_intel_pstate():
+            return get_available_frequencies_cpupower_hw_limits()
         return get_available_frequencies_cpupower()
     else:
         print("No available frequencies found")
@@ -266,7 +293,9 @@ def reset_frequency(sudo_password) -> None:
 
 
 if __name__ == "__main__":
-    set_governer("userspace","nilesh")
-    set_governer("performance","nilesh")
-    sudo_call_cpupower("nilesh","frequency-info -g")
-    get_available_frequencies()
+    reset_frequency("1234")
+    # set_governer("userspace","nilesh")
+    # set_governer("performance","nilesh")
+    # sudo_call_cpupower("nilesh","frequency-info -g")
+    # get_available_frequencies()
+    
