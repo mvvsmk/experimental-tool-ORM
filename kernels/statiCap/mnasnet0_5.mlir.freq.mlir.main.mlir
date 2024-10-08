@@ -1,4 +1,7 @@
 module attributes {torch.debug_module_name = "MNASNet"} {
+  func.func private @start_energy_time()
+  func.func private @stop_energy_time()
+  func.func private @print_energy_time()
   func.func private @set_frequency_caps(i64, i64)
   func.func private @S0(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: memref<64x3x226x226xf32>) attributes {scop.stmt} {
     %cst = arith.constant 0.000000e+00 : f32
@@ -4329,6 +4332,25 @@ module attributes {torch.debug_module_name = "MNASNet"} {
     memref.dealloc %alloc_188 : memref<64x576x11x11xf32>
     memref.dealloc %alloc_195 : memref<64x576x9x9xf32>
     return %alloc_205 : memref<64x1000xf32>
+  }
+  func.func @main() -> i32 {
+    %c0_i32 = arith.constant 0 : i32
+    %cst = arith.constant 0.000000e+00 : f32
+    %alloc = memref.alloc() : memref<64x3x224x224xf32>
+    affine.for %arg0 = 0 to 64 {
+      affine.for %arg1 = 0 to 3 {
+        affine.for %arg2 = 0 to 224 {
+          affine.for %arg3 = 0 to 224 {
+            affine.store %cst, %alloc[%arg0, %arg1, %arg2, %arg3] : memref<64x3x224x224xf32>
+          }
+        }
+      }
+    }
+    call @start_energy_time() : () -> ()
+    %0 = call @forward(%alloc) : (memref<64x3x224x224xf32>) -> memref<64x1000xf32>
+    call @stop_energy_time() : () -> ()
+    call @print_energy_time() : () -> ()
+    return %c0_i32 : i32
   }
 }
 
