@@ -3,47 +3,7 @@
 from common_imports import *
 from common_files import *
 from common_machine import *
-
-
-# red =  #ac3847
-# darkgree = #1c5954
-# brown = #744238
-# orange = #d35637
-# purple = #662c6d
-# deep pink = #352e36
-# deep green = #496357
-
-#---
-# 338b9a
-# 648458
-# 8db956
-# f7b24c
-#---
-
-def get_cache_color_list(caches_to_plot):
-    colors ={
-        "L1D" : "#338b9a",
-        "L2" : "#648458",
-        "L3" : "#f7b24c",
-        "DRAM" : "#ac3847"
-    }
-    return colors
-
-def get_marker_database_for_polybench(Name, polybench_df):
-    markers_l = ['o', 'v', '^', '<', '>', '1', '2', '3', '4', '8', 's', 'p', '*', 'h', 'H', '+', 'x', 'D', 'd', '|', '_', '.', ',', 'P', 'X']
-
-    # Add some random markers by repeating and extending the list
-    while len(markers_l) < 30:
-        markers_l += markers_l
-    
-    list_of_polybench = polybench_df["Name"].unique()
-    #create a dictionary of markers for each polybench kernel
-    markers = {}
-    for i, kernel in enumerate(list_of_polybench):
-        markers[kernel] = markers_l[i]   
-    
-    return markers   
-
+from common_color_markers import *
 
 #function to extract the data from the roofline folder
 def get_roofline_data_from_folder(result_folder : str):
@@ -60,24 +20,24 @@ def get_roofline_data_from_folder(result_folder : str):
 # function to take axes, a list of caches to plot roofline for, roofline folder, and machine name,  and prameter (energy, performance, or power) and plot the roofline
 def scatter_plot_hier_roofline(axes : mpl.axes._axes.Axes, caches_to_plot : list, roofline_folder : str, machine : str ,parameter : str, scatter=True):
     data, caches = get_roofline_data_from_folder(roofline_folder)
-    colors = plt.cm.viridis(np.linspace(0, 1, len(caches)))
+    colors = get_cache_color_list(caches_to_plot)
     if parameter == "energy":
         for i, cache in enumerate(caches):
             if cache not in caches_to_plot:
                 continue
             if scatter:
-                axes.scatter(data[i][1]["OI"], data[i][1]["Energy(J)"], label=f"{cache}", color=colors[i], marker="o")
+                axes.scatter(data[i][1]["OI"], data[i][1]["Energy(J)"], label=f"{cache}", color=colors[cache], marker="o")
             else:
-                axes.plot(data[i][1]["OI"], data[i][1]["Energy(J)"], label=f"{cache}", color=colors[i], marker="o")
+                axes.plot(data[i][1]["OI"], data[i][1]["Energy(J)"], label=f"{cache}", color=colors[cache], marker="o")
             axes.set_ylabel("Energy (J)")
             axes.set_xlabel("Operational Intensity (FLOPs/Byte)")
             
     elif parameter == "performance":
         for i, cache in enumerate(caches):
             if scatter:
-                axes.scatter(data[i][1]["OI"], (data[i][1]["total_flops"] / data[i][1]["Execution Time(s)"]) / 10**9, label=f"{cache}", color=colors[i], marker="o")
+                axes.scatter(data[i][1]["OI"], (data[i][1]["total_flops"] / data[i][1]["Execution Time(s)"]) / 10**9, label=f"{cache}", color=colors[cache], marker="o")
             else:
-                axes.plot(data[i][1]["OI"], (data[i][1]["total_flops"] / data[i][1]["Execution Time(s)"]) / 10**9, label=f"{cache}", color=colors[i], marker="o")
+                axes.plot(data[i][1]["OI"], (data[i][1]["total_flops"] / data[i][1]["Execution Time(s)"]) / 10**9, label=f"{cache}", color=colors[cache], marker="o")
             
             axes.set_ylabel("Performance (GFLOP/s)")
             axes.set_xlabel("Operational Intensity (FLOPs/Byte)")
@@ -85,9 +45,9 @@ def scatter_plot_hier_roofline(axes : mpl.axes._axes.Axes, caches_to_plot : list
     elif parameter == "power":
         for i, cache in enumerate(caches):
             if scatter:
-                axes.scatter(data[i][1]["OI"], data[i][1]["Power(W)"], label=f"{cache}", color=colors[i], marker="o")
+                axes.scatter(data[i][1]["OI"], data[i][1]["Power(W)"], label=f"{cache}", color=colors[cache], marker="o")
             else:
-                axes.plot(data[i][1]["OI"], data[i][1]["Power(W)"], label=f"{cache}", color=colors[i], marker="o")
+                axes.plot(data[i][1]["OI"], data[i][1]["Power(W)"], label=f"{cache}", color=colors[cache], marker="o")
             axes.set_ylabel("Power (W)")
             axes.set_xlabel("Operational Intensity (FLOPs/Byte)")
 

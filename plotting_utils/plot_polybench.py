@@ -3,6 +3,7 @@
 from common_imports import *
 from common_files import *
 from common_machine import *
+from common_color_markers import *
 
 #function to combine all the polybench data
 def combine_polybench_data(reading_csv : str, counter_csv :str ,machine_name : str,caches_to_plot : list = ["L1D", "L2", "L3", "DRAM"],make_cache_ois = False):
@@ -36,7 +37,7 @@ def combine_static_and_dynamic_data(df_merged_static,df_merged_dynamic):
 
 # function to plot oracle power
 def plot_all_polybench_parameter_vs_oi_given_cache(ax, polybench_df : str, parameter : str,caches_to_plot: list = ["L1D", "L2", "L3", "DRAM"]):
-    colors = plt.cm.cividis(np.linspace(0, 1, len(caches_to_plot)))
+    colors = get_cache_color_list(caches_to_plot)
     cache_col = {}
     for i, cache in enumerate(caches_to_plot):
         for col in polybench_df.columns:
@@ -45,16 +46,15 @@ def plot_all_polybench_parameter_vs_oi_given_cache(ax, polybench_df : str, param
 
     for i , cache in enumerate(caches_to_plot):
         if parameter == "power":
-            ax.scatter(polybench_df[cache_col[cache]], polybench_df["Power(W)"], label=f"{cache}", color=colors[i], marker="o")
+            ax.scatter(polybench_df[cache_col[cache]], polybench_df["Power(W)"], label=f"{cache}", color=colors[cache], marker="o")
             ax.set_ylabel("Power(W)")
         elif parameter == "performance":
-            ax.scatter(polybench_df[cache_col[cache]], polybench_df["Performance(GFLOP/s)"], label=f"{cache}", color=colors[i], marker="o")
+            ax.scatter(polybench_df[cache_col[cache]], polybench_df["Performance(GFLOP/s)"], label=f"{cache}", color=colors[cache], marker="o")
             ax.set_ylabel("Performance(GFLOP/s)")
         ax.set_xlabel("Operational Intensity (FLOPs/Byte)")
-        
+
 
 def plot_indivisual_polybench_parameter_vs_oi_given_cache(ax, polybench_df : str, parameter : str, Name : str,caches_to_plot: list = ["L1D", "L2", "L3", "DRAM"],scatter=True):
-    colors = plt.cm.cividis(np.linspace(0, 1, len(caches_to_plot)))
     df = polybench_df[polybench_df["Name"] == Name]
     # grouby name and take median of all other columns
     df = df.groupby("Name").median()
@@ -63,6 +63,9 @@ def plot_indivisual_polybench_parameter_vs_oi_given_cache(ax, polybench_df : str
         for col in polybench_df.columns:
             if cache in col and "OI" in col:
                 cache_col[cache] = col
+    
+    colors = get_cache_color_list(caches_to_plot)
+    markers = get_marker_database_for_polybench(Name, polybench_df)
     x_vals = []
     y_vals = []
     for i , cache in enumerate(caches_to_plot):
@@ -70,13 +73,13 @@ def plot_indivisual_polybench_parameter_vs_oi_given_cache(ax, polybench_df : str
             x_vals.append(df[cache_col[cache]])
             y_vals.append(df["Power(W)"])
             if scatter:
-                ax.scatter(df[cache_col[cache]], df["Power(W)"], label=f"{Name} at {cache}", color=colors[i], marker="o")
+                ax.scatter(df[cache_col[cache]], df["Power(W)"], label=f"{Name} at {cache}", color=colors[cache],marker=markers[Name])
             ax.set_ylabel("Power(W)")
         elif parameter == "performance":
             x_vals.append(df[cache_col[cache]])
             y_vals.append(df["Performance(GFLOP/s)"])
             if scatter:
-                ax.scatter(df[cache_col[cache]], df["Performance(GFLOP/s)"], label=f"{Name} at {cache}", color=colors[i], marker="o")
+                ax.scatter(df[cache_col[cache]], df["Performance(GFLOP/s)"], label=f"{Name} at {cache}", color=colors[cache], marker=markers[Name])
             ax.set_ylabel("Performance(GFLOP/s)")
         ax.set_xlabel("Operational Intensity (FLOPs/Byte)")
     if not scatter:
@@ -137,7 +140,10 @@ if __name__ == "__main__" :
     # plot_all_polybench_parameter_vs_oi_given_cache(ax, df_merged, "power")
     ax.set_xscale("log")
     ax.set_yscale("log")
-    plot_indivisual_polybench_parameter_vs_oi_given_cache(ax, df_merged, "power","2mm",scatter=False)
+    plot_indivisual_polybench_parameter_vs_oi_given_cache(ax, df_merged, "performance","2mm")
+    plot_indivisual_polybench_parameter_vs_oi_given_cache(ax, df_merged, "performance","3mm")
+    plot_indivisual_polybench_parameter_vs_oi_given_cache(ax, df_merged, "performance","lu")
+    plt.legend()
     plt.show()
 
 
