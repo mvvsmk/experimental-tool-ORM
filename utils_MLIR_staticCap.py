@@ -36,7 +36,7 @@ def run_without_energy_thread(command : str, password : str, machine : str) -> d
     energy_reading = float(output_list[-5])
     return {
         "Time Reading" : time_reading,
-        "Energy Reading" : energy_reading  * 1000000 ,
+        "Energy Reading" : energy_reading,
         "File Run" : True
     }
 
@@ -85,7 +85,7 @@ def compile_multiple_files(path_to_file, path_to_ll_file, path_to_obj_file,lbenc
     convert_to_obj(ll_file, path_to_obj_file)
     print(f"Compiled {path_to_file} to {path_to_obj_file}")
     '''g++ ./resnet18_mod_org.o  -lm -ldl -lmlir_c_runner_utils -L ./experimental-tool-ORM/kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib -L. -lbench -o resnet18_mod_org'''
-    command = f"g++ {path_to_obj_file} -lm -ldl -lmlir_c_runner_utils -L {mlir_libs} -L{lbench_path} -lbench -o {path_to_obj_file.split('.')[0]}"
+    command = f"g++ {path_to_obj_file} -lm -ldl -lmlir_c_runner_utils -L {mlir_libs} -L{lbench_path} -lbench -o {path_to_obj_file.split('.')[0]}.mlir.exec"
     try:
         subprocess.run(command, shell=True, check=True)
     except subprocess.CalledProcessError as e:
@@ -145,7 +145,7 @@ def run_mlir_obj_static_cap(build_dir,output_dir,sudo_password,machine,suffix=""
     list_of_files_to_run = []
     output_file = os.path.join(output_dir,f"MODEL_static_cap_{suffix}.csv")
     output_file_median = os.path.join(output_dir,f"MODEL_static_cap_{suffix}_median.csv")
-    list_of_files_to_run = [os.path.join(build_dir,x) for x in os.listdir(build_dir) if not x.endswith(".o") and not os.path.isdir(x)]
+    list_of_files_to_run = [os.path.join(build_dir,x) for x in os.listdir(build_dir) if x.endswith(".mlir.exec") ]
     
     print(f"files to run {list_of_files_to_run}")
     
@@ -179,12 +179,13 @@ def run_mlir_obj_static_cap(build_dir,output_dir,sudo_password,machine,suffix=""
             command = f"sudo -S {augment_env} {mlir_file}"
             print(f"will run : {command}")
             reading = run_without_energy_thread(command=command,password=sudo_password,machine=machine)
-            data["Name"].append(executable)
+            data["Name"].append(os.path.basename(executable))
             data["Energy(J)"].append(reading["Energy Reading"])
             data["Time(s)"].append(reading["Time Reading"])
             df = pandas.DataFrame(data)
             df.to_csv(output_file,index=False)
-        reset_frequency(sudo_password=sudo_password)
+        # reset_frequency(sudo_password=sudo_password)
+        set_frequency_cap(sudo_password=sudo_password,frequency=5000000)
         reset_uncore_freq_intel(password=sudo_password)
 
         #reset core and uncore frequecies
