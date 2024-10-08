@@ -133,7 +133,7 @@ def make_bench_lib(build_dir):
     return os.path.abspath(output_dir)
 
 
-def run_mlir_obj_static_cap(build_dir,output_dir,sudo_password,core_uncore_csv,machine,suffix="",itr = 1):
+def run_mlir_obj_static_cap(build_dir,output_dir,sudo_password,machine,suffix="",itr = 1):
 
     mlir_runner_libs = "kernels/MLIR_OpenEarth_BenchMarks/mlir_build/llvm-project/build/lib"
     mlir_runner_libs = os.path.join(os.curdir,mlir_runner_libs)
@@ -145,8 +145,7 @@ def run_mlir_obj_static_cap(build_dir,output_dir,sudo_password,core_uncore_csv,m
     list_of_files_to_run = []
     output_file = os.path.join(output_dir,f"MODEL_static_cap_{suffix}.csv")
     output_file_median = os.path.join(output_dir,f"MODEL_static_cap_{suffix}_median.csv")
-    core_uncore_dataframe = pandas.read_csv(core_uncore_csv)
-    list_of_files_to_run = list(core_uncore_dataframe["Name"].unique())
+    list_of_files_to_run = [os.path.join(build_dir,x) for x in os.listdir(build_dir) if not x.endswith(".o") and not os.path.isdir(x)]
     
     print(f"files to run {list_of_files_to_run}")
     
@@ -172,15 +171,6 @@ def run_mlir_obj_static_cap(build_dir,output_dir,sudo_password,core_uncore_csv,m
             print(f"already run {executable}")
             continue
         for _ in range(itr):
-            # read core and uncore frequecies from the csv file
-            dataframe_core_uncore = pandas.read_csv(core_uncore_csv, index_col=0)
-            # set core frequency
-            core_freq = dataframe_core_uncore.loc[executable]['CoreFreq']
-            set_frequency_cap(sudo_password=sudo_password, frequency=core_freq)
-            # set uncore frequency
-            uncore_freq = dataframe_core_uncore.loc[executable]['UncoreFreq']
-            set_max_uncore_freq_intel(frequency=uncore_freq,password=sudo_password)
-
             mlir_file = os.path.join(build_dir,executable)
             mlir_baseName = os.path.basename(mlir_file)
             mlir_baseName = os.path.splitext(mlir_baseName)[0]
@@ -217,3 +207,4 @@ if __name__ == '__main__' :
     os.makedirs(output_dir,exist_ok=True)
     sudo_password = "1234"
     compile_to_object_from_mlir("kernels/statiCap",build_dir)
+    run_mlir_obj_static_cap(build_dir,output_dir,sudo_password,"raptorlake","static_cap",itr=1)
